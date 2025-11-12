@@ -34,6 +34,12 @@ jobs:
         path: target
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
+    - name: Install cargo-audit
+      run: |
+        if ! command -v cargo-audit >/dev/null 2>&1; then
+          cargo install cargo-audit --locked
+        fi
+
     - name: Format Check
       run: cargo fmt -- --check
 
