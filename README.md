@@ -53,12 +53,12 @@ If Dolby Reference Player is already installed on your system, the tool will aut
 
 Install from / 从以下位置安装：https://professional.dolby.com/product/media-processing-and-delivery/drp---dolby-reference-player/
 
-**Method 2: Local dolby-tools Directory / 方式 2：本地 dolby-tools 目录**
+**Method 2: Local dolby-tools Directory / 方式 2：本地 dolby-tools 目录（可执行文件同目录）**
 
-Create a dolby-tools directory in the project root with the following structure / 在项目根目录创建 dolby-tools 目录，包含以下结构：
+Place a `dolby-tools/` folder next to the executable with the following structure / 将 `dolby-tools/` 放在可执行文件同目录，结构如下：
 
 ```
-dolby-tools/
+<exe_dir>/dolby-tools/
 ├── gstreamer/
 │   └── bin/
 │       └── gst-launch-1.0                    # GStreamer main program / GStreamer 主程序
@@ -73,7 +73,7 @@ dolby-tools/
     └── [other dependency libraries] / [其他依赖库]
 ```
 
-The tool will prioritize the local dolby-tools directory, and fall back to system-installed Dolby Reference Player if not found / 工具会优先使用本地 dolby-tools 目录，如果不存在则自动回退到系统安装的 Dolby Reference Player。
+When not specified via CLI/env, the tool looks next to the executable first, then the system Dolby Reference Player / 在未通过 CLI/环境变量指定时，工具先查找可执行文件同目录的 `dolby-tools/`，其后回退到系统 DRP。
 
 #### Environment Overrides / 环境变量覆盖
 
@@ -86,7 +86,7 @@ You can override tool locations via environment variables / 可通过环境变�
 Lookup order / 查找顺序：
 1) `MCAT_GST_LAUNCH` + `MCAT_GST_PLUGINS`
 2) `MCAT_DOLBY_TOOLS`
-3) `./dolby-tools`
+3) `<exe_dir>/dolby-tools`（可执行文件同目录）
 4) Dolby Reference Player app bundle
 
 #### Obtaining GStreamer Components / 获取 GStreamer 组件
@@ -286,7 +286,7 @@ Supported levels / 支持的级别：error, warn, info, debug, trace
 可以通过以下方式指定工具位置 / You can point the tool location via:
 - `--dolby-tools <PATH>`：基目录需包含 `gstreamer/bin/gst-launch-1.0` 与 `gst-plugins` / Base dir must contain `gstreamer/bin/gst-launch-1.0` and `gst-plugins`.
 - 环境变量：`MCAT_GST_LAUNCH` 与 `MCAT_GST_PLUGINS`，或 `MCAT_DOLBY_TOOLS` 基目录 / Env vars: `MCAT_GST_LAUNCH` + `MCAT_GST_PLUGINS`, or base dir `MCAT_DOLBY_TOOLS`.
-- 若未指定，将依次查找 `./dolby-tools` 与系统 Dolby Reference Player 应用包 / If not set, it tries `./dolby-tools` then the system Dolby Reference Player app bundle.
+- 若未指定，将依次查找 `<exe_dir>/dolby-tools` 与系统 Dolby Reference Player 应用包 / If not set, it tries `<exe_dir>/dolby-tools` then the system Dolby Reference Player app bundle.
 
 ### Decoding is Slow / 解码速度慢
 

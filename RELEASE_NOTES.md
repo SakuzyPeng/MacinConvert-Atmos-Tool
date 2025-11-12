@@ -21,8 +21,10 @@
     开发机参考耗时：7.1.4 ≈ 10–11 秒；9.1.6 ≈ 24–25 秒（实际因环境而异）。
 
 - Tooling & Setup / 工具与配置
-  - Locate tools by priority: `--dolby-tools` → `MCAT_GST_LAUNCH`+`MCAT_GST_PLUGINS` → `MCAT_DOLBY_TOOLS` → `./dolby-tools` → Dolby Reference Player
-    工具查找优先级：`--dolby-tools` → `MCAT_GST_LAUNCH`+`MCAT_GST_PLUGINS` → `MCAT_DOLBY_TOOLS` → `./dolby-tools` → Dolby Reference Player。
+  - Locate tools by priority: `--dolby-tools` → `MCAT_GST_LAUNCH`+`MCAT_GST_PLUGINS` → `MCAT_DOLBY_TOOLS` → `<exe_dir>/dolby-tools` → Dolby Reference Player
+    工具查找优先级：`--dolby-tools` → `MCAT_GST_LAUNCH`+`MCAT_GST_PLUGINS` → `MCAT_DOLBY_TOOLS` → `<exe_dir>/dolby-tools` → Dolby Reference Player。
+  - Note: CWD‑relative `./dolby-tools` is not used; if unspecified, only the executable directory and DRP are searched.
+    说明：不再使用相对 CWD 的 `./dolby-tools`；未指定时，仅搜索可执行文件目录与 DRP。
   - Dolby binaries are not bundled; place them under `dolby-tools/` or point via CLI/env
     不内置 Dolby 二进制，请放入 `dolby-tools/` 或通过 CLI/环境变量指定。
 

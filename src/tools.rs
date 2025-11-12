@@ -47,13 +47,18 @@ pub fn locate_tools(cli_base: Option<&Path>) -> Result<(PathBuf, PathBuf)> {
         }
     }
 
-    // 3) Try local copy first / 首先尝试本地副本
-    let local_gst = PathBuf::from("./dolby-tools/gstreamer/bin/gst-launch-1.0");
-    let local_plugins = PathBuf::from("./dolby-tools/gst-plugins");
-
-    if local_gst.exists() && local_plugins.exists() {
-        println!("使用本地 GStreamer 工具/Using local Dolby tools");
-        return Ok((local_gst, local_plugins));
+    // 3) Try alongside executable: <exe_dir>/dolby-tools / 可执行文件同目录的 dolby-tools
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            let exe_gst = exe_dir.join("dolby-tools/gstreamer/bin/gst-launch-1.0");
+            let exe_plugins = exe_dir.join("dolby-tools/gst-plugins");
+            if exe_gst.exists() && exe_plugins.exists() {
+                println!(
+                    "使用可执行文件同目录的 dolby-tools/Using dolby-tools next to the executable"
+                );
+                return Ok((exe_gst, exe_plugins));
+            }
+        }
     }
 
     // 4) Fallback to system Dolby Reference Player / 回退到系统安装的播放器

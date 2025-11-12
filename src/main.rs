@@ -50,6 +50,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         candidates.sort_by(|a, b| a.1.cmp(&b.1));
+        // If nothing found in the current directory, fall back to the executable's directory (non-recursive)
+        // 若当前目录未找到候选文件，则回退到可执行文件所在目录（同样不递归）
+        if candidates.is_empty() {
+            if let Ok(exe) = std::env::current_exe() {
+                if let Some(exe_dir) = exe.parent() {
+                    if let Ok(rd) = std::fs::read_dir(exe_dir) {
+                        for entry in rd.flatten() {
+                            let p = entry.path();
+                            if p.is_file() {
+                                if let Ok(meta) = entry.metadata() {
+                                    if meta.len() >= 4 && format::detect_format(&p, None).is_ok() {
+                                        if let Ok(mtime) = meta.modified() {
+                                            candidates.push((p.clone(), mtime));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if candidates.is_empty() {
             eprintln!("[错误] 未找到可用输入文件/No suitable input file found");
             return Err("未找到可用输入文件/No suitable input file found".into());
