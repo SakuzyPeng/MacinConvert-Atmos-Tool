@@ -33,6 +33,10 @@ pub fn decode(
             input_file.with_extension(&suffix[1..])
         };
 
+        // 若输出已存在，先删除，避免下游 filesink 行为受影响 / Remove existing output to avoid sink quirks
+        if out_path.exists() {
+            let _ = std::fs::remove_file(&out_path);
+        }
         decoded_files.push(out_path.clone());
 
         let command = build_gstreamer_command(
@@ -66,21 +70,25 @@ pub fn decode(
             handles.len(),
             handles.len()
         );
-        let mut threads = Vec::new();
-
-        for (id, name, command) in handles {
-            let handle = thread::spawn(move || {
-                println!("正在解码声道 {id}：{name}/Decoding channel {id}：{name}");
-                execute_command(&command)
-            });
-            threads.push(handle);
-        }
-
-        // Wait for all threads and collect errors / 等待所有线程并收集错误
-        for handle in threads {
-            handle.join().map_err(|_| {
-                DecodeError::GStreamerFailed("线程崩溃/Thread panicked".to_string())
-            })??;
+        // 控制并发度，避免系统资源争用和管道阻塞 / Limit concurrency to reduce resource contention
+        let max_parallel = std::cmp::max(2, num_cpus::get());
+        for chunk in handles.chunks(max_parallel) {
+            let mut threads = Vec::new();
+            for (id, name, command) in chunk {
+                let id = *id;
+                let name = name.clone();
+                let command = command.clone();
+                let handle = thread::spawn(move || {
+                    println!("正在解码声道 {id}：{name}/Decoding channel {id}：{name}");
+                    execute_command(&command)
+                });
+                threads.push(handle);
+            }
+            for handle in threads {
+                handle.join().map_err(|_| {
+                    DecodeError::GStreamerFailed("线程崩溃/Thread panicked".to_string())
+                })??;
+            }
         }
     }
 
@@ -133,9 +141,12 @@ fn build_gstreamer_command(
         "name=d".to_string(),
         format!("d.src_{channel_id}"),
         "!".to_string(),
+        "queue".to_string(),
+        "!".to_string(),
         "wavenc".to_string(),
         "!".to_string(),
         "filesink".to_string(),
+        "sync=false".to_string(),
         format!("location={}", output_file.display()),
     ]);
 
@@ -161,19 +172,19 @@ fn execute_command(command: &[String]) -> Result<()> {
         }
     }
 
-    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+    // 丢弃子进程输出，避免在高并发下因管道缓冲阻塞 / Drop child stdio to avoid pipe blocking under high concurrency
+    cmd.stdout(Stdio::null()).stderr(Stdio::null());
 
-    let output = cmd.output().map_err(|e| {
+    let status = cmd.status().map_err(|e| {
         DecodeError::GStreamerFailed(format!(
             "无法执行 gst-launch/Failed to execute gst-launch: {e}"
         ))
     })?;
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(DecodeError::GStreamerFailed(format!(
-            "GStreamer 管道失败/GStreamer pipeline failed: {stderr}"
-        )));
+    if !status.success() {
+        return Err(DecodeError::GStreamerFailed(
+            "GStreamer 管道失败/GStreamer pipeline failed".to_string(),
+        ));
     }
 
     Ok(())
