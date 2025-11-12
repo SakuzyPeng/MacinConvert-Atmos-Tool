@@ -28,23 +28,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("已启用懒人模式/Lazy mode enabled");
         merge = true;
         cleanup = true;
-        // 仅在当前目录收集候选文件（不递归）/ collect candidates in current directory only (non-recursive)
+        // 仅在当前目录收集候选文件（不递归），通过文件头检测 E-AC3/TrueHD /
+        // Collect in current directory only (non-recursive) using header detection
         let mut candidates: Vec<(PathBuf, std::time::SystemTime)> = Vec::new();
-        let exts = ["ec3", "eac3", "mlp", "truehd"];
         if let Ok(rd) = std::fs::read_dir(".") {
             for entry in rd.flatten() {
                 let p = entry.path();
                 if p.is_file() {
-                    if let Some(ext) = p
-                        .extension()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.to_lowercase())
-                    {
-                        if exts.contains(&ext.as_str()) {
-                            if let Ok(meta) = entry.metadata() {
-                                if let Ok(mtime) = meta.modified() {
-                                    candidates.push((p.clone(), mtime));
-                                }
+                    // quick size check to skip tiny files
+                    if let Ok(meta) = entry.metadata() {
+                        if meta.len() < 4 {
+                            continue;
+                        }
+                        if format::detect_format(&p, None).is_ok() {
+                            if let Ok(mtime) = meta.modified() {
+                                candidates.push((p.clone(), mtime));
                             }
                         }
                     }
