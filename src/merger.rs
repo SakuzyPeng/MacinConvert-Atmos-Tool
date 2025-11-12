@@ -63,6 +63,7 @@ pub fn merge_channels(channel_files: &[std::path::PathBuf], output_file: &Path) 
             DecodeError::MergeFailed(format!("无法读取 WAV 文件/Cannot read WAV file: {e}"))
         })?;
 
+        #[allow(clippy::cast_precision_loss)]
         let samples: Vec<f32> = match spec.sample_format {
             hound::SampleFormat::Float => reader
                 .into_samples::<f32>()
@@ -78,7 +79,7 @@ pub fn merge_channels(channel_files: &[std::path::PathBuf], output_file: &Path) 
                         DecodeError::MergeFailed(format!("无法读取样本/Cannot read samples: {e}"))
                     })?
                     .into_iter()
-                    .map(|s| s as f32 / 2147483648.0) // Convert i32 to f32 / 将 i32 转换为 f32
+                    .map(|s| s as f32 / 2_147_483_648.0) // Convert i32 to f32 / 将 i32 转换为 f32
                     .collect()
             }
         };
@@ -88,7 +89,7 @@ pub fn merge_channels(channel_files: &[std::path::PathBuf], output_file: &Path) 
 
     // Create output writer / 创建输出写入器
     let out_spec = hound::WavSpec {
-        channels: channel_files.len() as u16,
+        channels: u16::try_from(channel_files.len()).expect("channels <= u16"),
         sample_rate: spec.sample_rate,
         bits_per_sample: 32,
         sample_format: hound::SampleFormat::Float,

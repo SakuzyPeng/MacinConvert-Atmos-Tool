@@ -1,5 +1,4 @@
 use crate::error::{DecodeError, Result};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct ChannelConfig {
@@ -7,265 +6,108 @@ pub struct ChannelConfig {
     pub names: Vec<String>,
 }
 
+struct ChannelDef {
+    name: &'static str,
+    id: u32,
+    names: &'static [&'static str],
+}
+
+const CONFIGS: &[ChannelDef] = &[
+    ChannelDef {
+        name: "2.0",
+        id: 0,
+        names: &["L", "R"],
+    },
+    ChannelDef {
+        name: "3.1",
+        id: 3,
+        names: &["L", "R", "C", "LFE"],
+    },
+    ChannelDef {
+        name: "5.1",
+        id: 7,
+        names: &["L", "R", "C", "LFE", "Ls", "Rs"],
+    },
+    ChannelDef {
+        name: "7.1",
+        id: 11,
+        names: &["L", "R", "C", "LFE", "Ls", "Rs", "Lrs", "Rrs"],
+    },
+    ChannelDef {
+        name: "9.1",
+        id: 12,
+        names: &["L", "R", "C", "LFE", "Ls", "Rs", "Lrs", "Rrs", "Lw", "Rw"],
+    },
+    ChannelDef {
+        name: "5.1.2",
+        id: 13,
+        names: &["L", "R", "C", "LFE", "Ls", "Rs", "Ltm", "Rtm"],
+    },
+    ChannelDef {
+        name: "5.1.4",
+        id: 14,
+        names: &["L", "R", "C", "LFE", "Ls", "Rs", "Ltf", "Rtf", "Ltr", "Rtr"],
+    },
+    ChannelDef {
+        name: "7.1.2",
+        id: 15,
+        names: &["L", "R", "C", "LFE", "Ls", "Rs", "Lrs", "Rrs", "Ltm", "Rtm"],
+    },
+    ChannelDef {
+        name: "7.1.4",
+        id: 16,
+        names: &[
+            "L", "R", "C", "LFE", "Ls", "Rs", "Lrs", "Rrs", "Ltf", "Rtf", "Ltr", "Rtr",
+        ],
+    },
+    ChannelDef {
+        name: "7.1.6",
+        id: 17,
+        names: &[
+            "L", "R", "C", "LFE", "Ls", "Rs", "Lrs", "Rrs", "Ltf", "Rtf", "Ltm", "Rtm", "Ltr",
+            "Rtr",
+        ],
+    },
+    ChannelDef {
+        name: "9.1.2",
+        id: 18,
+        names: &[
+            "L", "R", "C", "LFE", "Ls", "Rs", "Lrs", "Rrs", "Lw", "Rw", "Ltm", "Rtm",
+        ],
+    },
+    ChannelDef {
+        name: "9.1.4",
+        id: 19,
+        names: &[
+            "L", "R", "C", "LFE", "Ls", "Rs", "Lrs", "Rrs", "Lw", "Rw", "Ltf", "Rtf", "Ltr", "Rtr",
+        ],
+    },
+    ChannelDef {
+        name: "9.1.6",
+        id: 20,
+        names: &[
+            "L", "R", "C", "LFE", "Ls", "Rs", "Lrs", "Rrs", "Lw", "Rw", "Ltf", "Rtf", "Ltm", "Rtm",
+            "Ltr", "Rtr",
+        ],
+    },
+];
+
 pub fn get_config(config_name: &str) -> Result<ChannelConfig> {
-    let mut configs = HashMap::new();
-
-    // 2.0
-    configs.insert(
-        "2.0",
-        ChannelConfig {
-            id: 0,
-            names: vec!["L".to_string(), "R".to_string()],
-        },
-    );
-
-    // 3.1
-    configs.insert(
-        "3.1",
-        ChannelConfig {
-            id: 3,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-            ],
-        },
-    );
-
-    // 5.1
-    configs.insert(
-        "5.1",
-        ChannelConfig {
-            id: 7,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-            ],
-        },
-    );
-
-    // 7.1
-    configs.insert(
-        "7.1",
-        ChannelConfig {
-            id: 11,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Lrs".to_string(),
-                "Rrs".to_string(),
-            ],
-        },
-    );
-
-    // 9.1
-    configs.insert(
-        "9.1",
-        ChannelConfig {
-            id: 12,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Lrs".to_string(),
-                "Rrs".to_string(),
-                "Lw".to_string(),
-                "Rw".to_string(),
-            ],
-        },
-    );
-
-    // 5.1.2
-    configs.insert(
-        "5.1.2",
-        ChannelConfig {
-            id: 13,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Ltm".to_string(),
-                "Rtm".to_string(),
-            ],
-        },
-    );
-
-    // 5.1.4
-    configs.insert(
-        "5.1.4",
-        ChannelConfig {
-            id: 14,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Ltf".to_string(),
-                "Rtf".to_string(),
-                "Ltr".to_string(),
-                "Rtr".to_string(),
-            ],
-        },
-    );
-
-    // 7.1.2
-    configs.insert(
-        "7.1.2",
-        ChannelConfig {
-            id: 15,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Lrs".to_string(),
-                "Rrs".to_string(),
-                "Ltm".to_string(),
-                "Rtm".to_string(),
-            ],
-        },
-    );
-
-    // 7.1.4
-    configs.insert(
-        "7.1.4",
-        ChannelConfig {
-            id: 16,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Lrs".to_string(),
-                "Rrs".to_string(),
-                "Ltf".to_string(),
-                "Rtf".to_string(),
-                "Ltr".to_string(),
-                "Rtr".to_string(),
-            ],
-        },
-    );
-
-    // 7.1.6
-    configs.insert(
-        "7.1.6",
-        ChannelConfig {
-            id: 17,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Lrs".to_string(),
-                "Rrs".to_string(),
-                "Ltf".to_string(),
-                "Rtf".to_string(),
-                "Ltm".to_string(),
-                "Rtm".to_string(),
-                "Ltr".to_string(),
-                "Rtr".to_string(),
-            ],
-        },
-    );
-
-    // 9.1.2
-    configs.insert(
-        "9.1.2",
-        ChannelConfig {
-            id: 18,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Lrs".to_string(),
-                "Rrs".to_string(),
-                "Lw".to_string(),
-                "Rw".to_string(),
-                "Ltm".to_string(),
-                "Rtm".to_string(),
-            ],
-        },
-    );
-
-    // 9.1.4
-    configs.insert(
-        "9.1.4",
-        ChannelConfig {
-            id: 19,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Lrs".to_string(),
-                "Rrs".to_string(),
-                "Lw".to_string(),
-                "Rw".to_string(),
-                "Ltf".to_string(),
-                "Rtf".to_string(),
-                "Ltr".to_string(),
-                "Rtr".to_string(),
-            ],
-        },
-    );
-
-    // 9.1.6
-    configs.insert(
-        "9.1.6",
-        ChannelConfig {
-            id: 20,
-            names: vec![
-                "L".to_string(),
-                "R".to_string(),
-                "C".to_string(),
-                "LFE".to_string(),
-                "Ls".to_string(),
-                "Rs".to_string(),
-                "Lrs".to_string(),
-                "Rrs".to_string(),
-                "Lw".to_string(),
-                "Rw".to_string(),
-                "Ltf".to_string(),
-                "Rtf".to_string(),
-                "Ltm".to_string(),
-                "Rtm".to_string(),
-                "Ltr".to_string(),
-                "Rtr".to_string(),
-            ],
-        },
-    );
-
-    configs.get(config_name)
-        .cloned()
-        .ok_or_else(|| DecodeError::InvalidChannelConfig(
-            format!("未知声道配置/Unknown channel configuration: {config_name}. 支持的配置/Supported: 2.0, 3.1, 5.1, 7.1, 9.1, 5.1.2, 5.1.4, 7.1.2, 7.1.4, 7.1.6, 9.1.2, 9.1.4, 9.1.6")
-        ))
+    if let Some(def) = CONFIGS
+        .iter()
+        .find(|d| d.name.eq_ignore_ascii_case(config_name))
+    {
+        return Ok(ChannelConfig {
+            id: def.id,
+            names: def.names.iter().map(|s| (*s).to_string()).collect(),
+        });
+    }
+    let supported = CONFIGS
+        .iter()
+        .map(|d| d.name)
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(DecodeError::InvalidChannelConfig(format!(
+        "未知声道配置/Unknown channel configuration: {config_name}. 支持的配置/Supported: {supported}"
+    )))
 }

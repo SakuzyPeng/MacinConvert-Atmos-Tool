@@ -10,14 +10,11 @@ pub fn locate_tools(cli_base: Option<&Path>) -> Result<(PathBuf, PathBuf)> {
         if gst.exists() && plugins.exists() {
             println!("使用命令行指定的 dolby-tools 目录/Using dolby-tools from --dolby-tools");
             return Ok((gst, plugins));
-        } else {
-            return Err(DecodeError::ToolsNotFound(
-                format!(
-                    "--dolby-tools 路径无效，应包含: gstreamer/bin/gst-launch-1.0 与 gst-plugins/Invalid --dolby-tools path; expected layout with gstreamer/bin/gst-launch-1.0 and gst-plugins: {}",
-                    base.display()
-                ),
-            ));
         }
+        return Err(DecodeError::ToolsNotFound(format!(
+            "--dolby-tools 路径无效，应包含: gstreamer/bin/gst-launch-1.0 与 gst-plugins/Invalid --dolby-tools path; expected layout with gstreamer/bin/gst-launch-1.0 and gst-plugins: {}",
+            base.display()
+        )));
     }
 
     // 1) Explicit env overrides / 显式环境变量覆盖

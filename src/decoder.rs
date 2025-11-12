@@ -12,7 +12,7 @@ pub fn decode(
     output_base: Option<&PathBuf>,
     gst_launch: &Path,
     gst_plugins: &Path,
-    audio_format: &AudioFormat,
+    audio_format: AudioFormat,
     channel_config: &ChannelConfig,
     single: bool,
     no_numbers: bool,
@@ -27,11 +27,10 @@ pub fn decode(
             format!(".{:02}_{channel_name}.wav", channel_id + 1)
         };
 
-        let out_path = if let Some(base) = output_base {
-            base.with_extension(&suffix[1..]) // 移除前导点/Remove leading dot
-        } else {
-            input_file.with_extension(&suffix[1..])
-        };
+        let out_path = output_base.map_or_else(
+            || input_file.with_extension(&suffix[1..]),
+            |base| base.with_extension(&suffix[1..]),
+        );
 
         // 若输出已存在，先删除，避免下游 filesink 行为受影响 / Remove existing output to avoid sink quirks
         if out_path.exists() {
@@ -46,7 +45,7 @@ pub fn decode(
             channel_config.id,
             gst_launch,
             gst_plugins,
-            *audio_format,
+            audio_format,
         );
 
         if single {
@@ -149,6 +148,10 @@ fn build_gstreamer_command(
         format!("d.src_{channel_id}"),
         "!".to_string(),
         "queue".to_string(),
+        "!".to_string(),
+        "audioconvert".to_string(),
+        "!".to_string(),
+        "audio/x-raw,format=F32LE".to_string(),
         "!".to_string(),
         "wavenc".to_string(),
         "!".to_string(),

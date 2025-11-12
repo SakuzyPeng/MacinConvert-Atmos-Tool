@@ -1,4 +1,5 @@
 use crate::error::{DecodeError, Result};
+use std::io::Read;
 use std::path::Path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,7 +26,6 @@ pub fn detect_format(file_path: &Path, explicit_format: Option<&str>) -> Result<
     })?;
 
     let mut header = [0u8; 10];
-    use std::io::Read;
     file.read_exact(&mut header).map_err(|e| {
         DecodeError::FormatDetectionFailed(format!("无法读取文件头/Cannot read file header: {e}"))
     })?;
