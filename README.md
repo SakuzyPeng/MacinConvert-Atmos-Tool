@@ -352,6 +352,17 @@ Sakuzy
 - Claude 4.5 Haiku (Anthropic)：负责本项目的代码编写 / Led the code implementation for this project.
 - OpenAI GPT-5 与 Codex 系列：提供审查与质量保障 / Provided code review and quality assurance.
 
+## Disclaimer / 免责声明
+
+- For research and educational use only — verify local laws and licenses before decoding proprietary formats.
+  本项目仅供研究与教学使用——在解码专有格式之前，请先确认当地法律与许可条款。
+- No Dolby binaries are bundled; you must supply your own tools and ensure you have rights to use them.
+  项目不内置任何 Dolby 二进制文件；请自备工具并确保拥有合法使用权。
+- We are not affiliated with Dolby; all trademarks belong to their respective owners.
+  本项目与 Dolby 无任何从属或合作关系；相关商标归其各自权利人所有。
+- Use at your own risk; output may vary across systems and plugin versions — validate critical results in your reference workflow.
+  风险自负；不同系统与插件版本的输出可能存在差异——关键场景请在自有流程中交叉验证结果。
+
 ## Changelog / 更新日志
 
 ### 0.1.0
