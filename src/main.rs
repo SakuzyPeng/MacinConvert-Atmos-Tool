@@ -28,24 +28,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("已启用懒人模式/Lazy mode enabled");
         merge = true;
         cleanup = true;
-        // 在当前目录与 ./audio/ 下收集所有候选文件 / collect all candidates under . and ./audio
+        // 仅在当前目录收集候选文件（不递归）/ collect candidates in current directory only (non-recursive)
         let mut candidates: Vec<(PathBuf, std::time::SystemTime)> = Vec::new();
         let exts = ["ec3", "eac3", "thd", "truehd"];
-        for dir in [".", "./audio"].iter() {
-            if let Ok(rd) = std::fs::read_dir(dir) {
-                for entry in rd.flatten() {
-                    let p = entry.path();
-                    if p.is_file() {
-                        if let Some(ext) = p
-                            .extension()
-                            .and_then(|s| s.to_str())
-                            .map(|s| s.to_lowercase())
-                        {
-                            if exts.contains(&ext.as_str()) {
-                                if let Ok(meta) = entry.metadata() {
-                                    if let Ok(mtime) = meta.modified() {
-                                        candidates.push((p.clone(), mtime));
-                                    }
+        if let Ok(rd) = std::fs::read_dir(".") {
+            for entry in rd.flatten() {
+                let p = entry.path();
+                if p.is_file() {
+                    if let Some(ext) = p
+                        .extension()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.to_lowercase())
+                    {
+                        if exts.contains(&ext.as_str()) {
+                            if let Ok(meta) = entry.metadata() {
+                                if let Ok(mtime) = meta.modified() {
+                                    candidates.push((p.clone(), mtime));
                                 }
                             }
                         }
