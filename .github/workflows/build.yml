@@ -20,6 +20,7 @@ jobs:
       run: |
         mkdir -p ~/.cargo/registry
         mkdir -p ~/.cargo/git
+        mkdir -p ~/.cargo/bin
         mkdir -p target
 
     - name: Cache cargo registry
@@ -39,6 +40,15 @@ jobs:
       with:
         path: target
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo binaries
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin
+          ~/.cargo/.crates.toml
+          ~/.cargo/.crates2.json
+        key: ${{ runner.os }}-cargo-bin-cargo-audit-0.21.2
 
     - name: Install cargo-audit
       run: |
