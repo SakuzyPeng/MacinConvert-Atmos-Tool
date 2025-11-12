@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(inp) = args.input.clone() {
         inputs.push(inp);
     }
-    if args.lazy && inputs.is_empty() {
+    if args.lazy || inputs.is_empty() {
         println!("已启用懒人模式/Lazy mode enabled");
         merge = true;
         cleanup = true;
