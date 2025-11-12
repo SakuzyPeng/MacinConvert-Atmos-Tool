@@ -7,9 +7,9 @@ use std::path::PathBuf;
 #[command(author = "Sakuzy")]
 #[command(version)]
 pub struct Args {
-    /// 输入文件（E-AC3/TrueHD 格式）/Input file (E-AC3/TrueHD format)
+    /// 输入文件（E-AC3/TrueHD 格式；懒人模式可省略）/Input file (E-AC3/TrueHD format; optional in lazy mode)
     #[arg(short, long)]
-    pub input: PathBuf,
+    pub input: Option<PathBuf>,
 
     /// 输出基础路径（可选，默认为输入目录）/Output base path (optional, defaults to input directory)
     #[arg(short, long)]
@@ -38,4 +38,16 @@ pub struct Args {
     /// 合并后删除分离的声道文件/Remove discrete channel files after merging
     #[arg(long)]
     pub cleanup: bool,
+
+    /// 指定 dolby-tools 基目录（包含 gstreamer/bin 与 gst-plugins）/Specify dolby-tools base directory (contains gstreamer/bin and gst-plugins)
+    #[arg(long)]
+    pub dolby_tools: Option<PathBuf>,
+
+    /// 并行作业数（覆盖默认与环境变量）/Number of parallel jobs (overrides default and env)
+    #[arg(short = 'j', long)]
+    pub jobs: Option<usize>,
+
+    /// 懒人模式：自动选择最近的原始音频并顺序解码、合并、清理（9.1.6）/Lazy mode: auto-pick latest source and run sequential decode + merge + cleanup (9.1.6)
+    #[arg(long)]
+    pub lazy: bool,
 }

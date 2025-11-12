@@ -75,6 +75,20 @@ dolby-tools/
 
 The tool will prioritize the local dolby-tools directory, and fall back to system-installed Dolby Reference Player if not found / 工具会优先使用本地 dolby-tools 目录，如果不存在则自动回退到系统安装的 Dolby Reference Player。
 
+#### Environment Overrides / 环境变量覆盖
+
+You can override tool locations via environment variables / 可通过环境变量覆盖工具查找路径：
+
+- `MCAT_GST_LAUNCH`: absolute path to `gst-launch-1.0` / `gst-launch-1.0` 的绝对路径
+- `MCAT_GST_PLUGINS`: path to GStreamer plugins dir / GStreamer 插件目录路径
+- `MCAT_DOLBY_TOOLS`: base dir containing `gstreamer/bin` and `gst-plugins` / 包含 `gstreamer/bin` 与 `gst-plugins` 的基目录
+
+Lookup order / 查找顺序：
+1) `MCAT_GST_LAUNCH` + `MCAT_GST_PLUGINS`
+2) `MCAT_DOLBY_TOOLS`
+3) `./dolby-tools`
+4) Dolby Reference Player app bundle
+
 #### Obtaining GStreamer Components / 获取 GStreamer 组件
 
 GStreamer and related plugins can be obtained from the following sources / GStreamer 及相关插件可以从以下来源获取：
@@ -188,6 +202,10 @@ Usage: MacinConvert-Atmos-Tool [OPTIONS]
 
 Options:
   -i, --input <INPUT>
+      --dolby-tools <PATH>
+          指定 dolby-tools 基目录（包含 gstreamer/bin 与 gst-plugins）/Specify dolby-tools base directory (contains gstreamer/bin and gst-plugins)
+  -j, --jobs <JOBS>
+          并行作业数（覆盖默认与环境变量 MCAT_MAX_PAR）/Parallel jobs (overrides default and env MCAT_MAX_PAR)
       Input audio file (E-AC3/TrueHD format) / 输入音频文件（E-AC3/TrueHD 格式）
 
   -o, --output <OUTPUT>
@@ -249,16 +267,26 @@ RUST_LOG=debug ./MacinConvert-Atmos-Tool --input file.eac3
 
 Supported levels / 支持的级别：error, warn, info, debug, trace
 
+## Lazy Mode / 懒人模式
+
+无需参数即可双击或运行二进制 / Double‑click or run with no args，程序会 / it will:
+- 在当前目录与 `audio/` 下收集原始杜比音频并按时间顺序逐个处理（扩展名：`ec3/eac3/thd/truehd`）/ Collect raw Dolby sources under `.` and `audio/` and process one file at a time (extensions: `ec3/eac3/thd/truehd`).
+- 每个文件内部使用默认并发解码（默认 4，可用 `-j/--jobs` 或 `MCAT_MAX_PAR` 调整），按 9.1.6 配置自动 `--merge --cleanup` / For each file, decode with default parallelism (4 by default; tune via `-j/--jobs` or `MCAT_MAX_PAR`) and auto `--merge --cleanup` with 9.1.6.
+- 在批处理模式下将 `--output` 视为输出目录（若不存在自动创建），每个输出以输入基名命名 / In batch mode, `--output` is treated as an output directory (auto‑created), each output named after the input stem.
+
+命令等价示例 / Equivalent command:
+```bash
+./MacinConvert-Atmos-Tool --lazy
+```
+
 ## FAQ / 常见问题
 
 ### Dolby Tools Not Found / 找不到 Dolby 工具
 
-Make sure Dolby Reference Player is installed, or place the dolby-tools directory in the project root / 确保已安装 Dolby Reference Player，或将 dolby-tools 目录放在项目根目录。
-
-Find Dolby Reference Player / 查找 Dolby Reference Player：
-```bash
-ls -la /Applications/Dolby/
-```
+可以通过以下方式指定工具位置 / You can point the tool location via:
+- `--dolby-tools <PATH>`：基目录需包含 `gstreamer/bin/gst-launch-1.0` 与 `gst-plugins` / Base dir must contain `gstreamer/bin/gst-launch-1.0` and `gst-plugins`.
+- 环境变量：`MCAT_GST_LAUNCH` 与 `MCAT_GST_PLUGINS`，或 `MCAT_DOLBY_TOOLS` 基目录 / Env vars: `MCAT_GST_LAUNCH` + `MCAT_GST_PLUGINS`, or base dir `MCAT_DOLBY_TOOLS`.
+- 若未指定，将依次查找 `./dolby-tools` 与系统 Dolby Reference Player 应用包 / If not set, it tries `./dolby-tools` then the system Dolby Reference Player app bundle.
 
 ### Decoding is Slow / 解码速度慢
 
@@ -309,14 +337,7 @@ src/
   error.rs        - Error type definitions / 错误类型定义
 ```
 
-## Dependencies / 依赖项
 
-- clap - CLI argument parsing / CLI 参数解析
-- hound - WAV file I/O / WAV 文件 I/O
-- ndarray - Array operations / 数组操作
-- thiserror - Error handling / 错误处理
-- log/env_logger - Logging / 日志
-- serde - Serialization / 序列化
 
 ## License / 许可证
 

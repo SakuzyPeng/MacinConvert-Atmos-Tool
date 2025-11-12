@@ -1,10 +1,10 @@
 use crate::channels::ChannelConfig;
 use crate::error::{DecodeError, Result};
 use crate::format::AudioFormat;
+use rayon::{prelude::*, ThreadPoolBuilder};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::thread;
 
 #[allow(clippy::too_many_arguments)]
 pub fn decode(
@@ -63,33 +63,40 @@ pub fn decode(
         }
     }
 
-    // Execute parallel decoding / 执行并行解码
+    // Execute parallel decoding (rayon) / 执行并行解码（rayon）
     if !single && !handles.is_empty() {
         println!(
             "并行解码 {} 个声道/Decoding {} channels in parallel",
             handles.len(),
             handles.len()
         );
-        // 控制并发度，避免系统资源争用和管道阻塞 / Limit concurrency to reduce resource contention
-        let max_parallel = std::cmp::max(2, num_cpus::get());
-        for chunk in handles.chunks(max_parallel) {
-            let mut threads = Vec::new();
-            for (id, name, command) in chunk {
-                let id = *id;
-                let name = name.clone();
-                let command = command.clone();
-                let handle = thread::spawn(move || {
+        // 线程数 = 环境变量 MCAT_MAX_PAR 或 CPU 数，且至少 2，不超过声道数 / threads = env or CPUs, min 2, <= channels
+        // 默认并发设为 4，更符合当前解码/IO 性能特性；当 CPU 少于 4 时退化为 CPU 数且至少 2
+        let default_threads = num_cpus::get().clamp(2, 4);
+        let requested_threads = std::env::var("MCAT_MAX_PAR")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .filter(|&n| n >= 1)
+            .unwrap_or(default_threads);
+        let max_parallel = std::cmp::min(requested_threads, handles.len());
+        let pool = ThreadPoolBuilder::new()
+            .num_threads(max_parallel)
+            .build()
+            .map_err(|e| {
+                DecodeError::GStreamerFailed(format!(
+                    "创建线程池失败/Failed to build thread pool: {e}"
+                ))
+            })?;
+
+        pool.install(|| -> Result<()> {
+            handles
+                .par_iter()
+                .map(|(id, name, command)| {
                     println!("正在解码声道 {id}：{name}/Decoding channel {id}：{name}");
-                    execute_command(&command)
-                });
-                threads.push(handle);
-            }
-            for handle in threads {
-                handle.join().map_err(|_| {
-                    DecodeError::GStreamerFailed("线程崩溃/Thread panicked".to_string())
-                })??;
-            }
-        }
+                    execute_command(command)
+                })
+                .collect::<Result<()>>()
+        })?;
     }
 
     Ok(decoded_files)
