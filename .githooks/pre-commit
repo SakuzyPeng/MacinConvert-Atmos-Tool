@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# Pre-commit hook for MacinConvert-Atmos-Tool
+# This script runs checks before allowing a commit
+
+set -e
+
+echo "[检查] 运行提交前检查 / Running pre-commit checks..."
+echo ""
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Format Check
+echo -e "${YELLOW}[步骤] 运行代码格式检查 / Running format check (cargo fmt)...${NC}"
+if ! cargo fmt -- --check; then
+    echo -e "${RED}[错误] 代码格式检查失败 / Format check failed!${NC}"
+    echo "运行 'cargo fmt' 来修复格式问题 / Run 'cargo fmt' to fix formatting issues."
+    exit 1
+fi
+echo -e "${GREEN}[通过] 代码格式检查通过 / Format check passed${NC}"
+echo ""
+
+# Static Analysis
+echo -e "${YELLOW}[步骤] 运行静态分析 / Running static analysis (cargo check)...${NC}"
+if ! cargo check --all-targets; then
+    echo -e "${RED}[错误] 静态分析失败 / Static analysis failed!${NC}"
+    exit 1
+fi
+echo -e "${GREEN}[通过] 静态分析通过 / Static analysis passed${NC}"
+echo ""
+
+# Clippy Check
+echo -e "${YELLOW}[步骤] 运行 Clippy 检查 / Running clippy checks...${NC}"
+if ! cargo clippy -- -D warnings; then
+    echo -e "${RED}[错误] Clippy 检查失败 / Clippy check failed!${NC}"
+    exit 1
+fi
+echo -e "${GREEN}[通过] Clippy 检查通过 / Clippy check passed${NC}"
+echo ""
+
+# Security Audit (optional - can be slower)
+echo -e "${YELLOW}[步骤] 运行安全审计 / Running security audit...${NC}"
+if ! cargo audit; then
+    echo -e "${RED}[错误] 安全审计发现漏洞 / Security audit found vulnerabilities!${NC}"
+    exit 1
+fi
+echo -e "${GREEN}[通过] 安全审计通过 / Security audit passed${NC}"
+echo ""
+
+echo -e "${GREEN}[完成] 所有提交前检查都通过了 / All pre-commit checks passed!${NC}"
+exit 0

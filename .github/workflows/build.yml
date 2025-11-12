@@ -1,0 +1,64 @@
+name: Build macOS Binary
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  check-and-build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Format Check
+      run: cargo fmt -- --check
+
+    - name: Static Analysis (cargo check)
+      run: cargo check --all-targets
+
+    - name: Security Audit
+      run: cargo audit
+
+    - name: Clippy Check
+      run: cargo clippy -- -D warnings
+
+    - name: Build Release Binary
+      run: cargo build --release
+
+    - name: Rename Binary with Timestamp and Timezone
+      run: |
+        TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S-%Z)
+        mv target/release/MacinConvert-Atmos-Tool "target/release/MacinConvert-Atmos-Tool-${TIMESTAMP}"
+        echo "[完成] 二进制文件已重命名为 MacinConvert-Atmos-Tool-${TIMESTAMP}"
+        echo "BINARY_NAME=MacinConvert-Atmos-Tool-${TIMESTAMP}" >> $GITHUB_ENV
+
+    - name: Upload Release Binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: MacinConvert-Atmos-Tool-macOS
+        path: target/release/MacinConvert-Atmos-Tool-*
+        retention-days: 30
