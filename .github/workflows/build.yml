@@ -16,6 +16,12 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
 
+    - name: Prepare cache directories
+      run: |
+        mkdir -p ~/.cargo/registry
+        mkdir -p ~/.cargo/git
+        mkdir -p target
+
     - name: Cache cargo registry
       uses: actions/cache@v3
       with:
@@ -62,9 +68,16 @@ jobs:
         echo "[完成] 二进制文件已重命名为 MacinConvert-Atmos-Tool-${TIMESTAMP}"
         echo "BINARY_NAME=MacinConvert-Atmos-Tool-${TIMESTAMP}" >> $GITHUB_ENV
 
-    - name: Upload Release Binary
+    - name: Package Release Binary
+      run: |
+        ARCHIVE_NAME="${BINARY_NAME}.tar.gz"
+        tar -czf "target/release/${ARCHIVE_NAME}" -C target/release "${BINARY_NAME}"
+        echo "[完成] 压缩包已创建为 ${ARCHIVE_NAME}"
+        echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
+
+    - name: Upload Release Archive
       uses: actions/upload-artifact@v4
       with:
-        name: MacinConvert-Atmos-Tool-macOS
-        path: target/release/MacinConvert-Atmos-Tool-*
+        name: ${{ env.ARCHIVE_NAME }}
+        path: target/release/${{ env.ARCHIVE_NAME }}
         retention-days: 30
