@@ -57,7 +57,7 @@ jobs:
         echo "BINARY_NAME=MacinConvert-Atmos-Tool-${TIMESTAMP}" >> $GITHUB_ENV
 
     - name: Upload Release Binary
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: MacinConvert-Atmos-Tool-macOS
         path: target/release/MacinConvert-Atmos-Tool-*
