@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cleanup = true;
         // 仅在当前目录收集候选文件（不递归）/ collect candidates in current directory only (non-recursive)
         let mut candidates: Vec<(PathBuf, std::time::SystemTime)> = Vec::new();
-        let exts = ["ec3", "eac3", "thd", "truehd"];
+        let exts = ["ec3", "eac3", "mlp", "truehd"];
         if let Ok(rd) = std::fs::read_dir(".") {
             for entry in rd.flatten() {
                 let p = entry.path();

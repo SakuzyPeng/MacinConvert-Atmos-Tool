@@ -270,7 +270,7 @@ Supported levels / 支持的级别：error, warn, info, debug, trace
 ## Lazy Mode / 懒人模式
 
 无需参数即可双击或运行二进制 / Double‑click or run with no args，程序会 / it will:
-- 仅在当前目录收集原始杜比音频并按时间顺序逐个处理（扩展名：`ec3/eac3/thd/truehd`）/ Collect raw Dolby sources in the current directory only and process one file at a time (extensions: `ec3/eac3/thd/truehd`).
+- 仅在当前目录收集原始杜比音频并按时间顺序逐个处理（扩展名：`ec3/eac3/mlp/truehd`）/ Collect raw Dolby sources in the current directory only and process one file at a time (extensions: `ec3/eac3/mlp/truehd`).
 - 每个文件内部使用默认并发解码（默认 4，可用 `-j/--jobs` 或 `MCAT_MAX_PAR` 调整），按 9.1.6 配置自动 `--merge --cleanup` / For each file, decode with default parallelism (4 by default; tune via `-j/--jobs` or `MCAT_MAX_PAR`) and auto `--merge --cleanup` with 9.1.6.
 - 在批处理模式下将 `--output` 视为输出目录（若不存在自动创建），每个输出以输入基名命名 / In batch mode, `--output` is treated as an output directory (auto‑created), each output named after the input stem.
 
