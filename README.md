@@ -326,6 +326,11 @@ MIT License
 
 Sakuzy
 
+## Acknowledgments / 致谢
+
+- Claude 4.5 Haiku (Anthropic)：负责本项目的代码编写 / Led the code implementation for this project.
+- OpenAI GPT-5 与 Codex 系列：提供审查与质量保障 / Provided code review and quality assurance.
+
 ## Changelog / 更新日志
 
 ### 0.1.0
