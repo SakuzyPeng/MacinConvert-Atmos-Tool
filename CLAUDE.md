@@ -1,8 +1,29 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 本文件为 Claude Code (claude.ai/code) 在此仓库中工作时提供指导。
 
 **说中文！**: 此项目使用中文进行交流。请用中文回复所有问题和提供所有反馈。
+
+## 快速命令参考
+
+```bash
+# 开发工作流 / Development workflow
+cargo build              # 构建调试版本 / Build debug binary
+cargo build --release   # 构建发布版本 / Build release binary
+cargo check             # 快速验证代码 / Quick syntax check
+cargo fmt               # 格式化代码 / Format code
+cargo clippy -- -D warnings  # 代码检查 / Lint warnings
+cargo run -- --help     # 查看所有 CLI 参数 / Show all CLI args
+
+# 测试 / Testing
+cargo run -- --input audio/test.eac3 --channels 5.1  # 测试基本功能 / Test basic functionality
+RUST_LOG=debug cargo run -- --input test.eac3        # 启用调试日志 / Enable debug logging
+
+# 项目设置 / Initial setup
+bash scripts/setup-hooks.sh  # 配置 git hooks / Setup git hooks
+```
 
 ## 双语编码规范
 
@@ -117,15 +138,28 @@ const 最大声道数: usize = 16; // 不要用中文命名
 - 可选的声道合并以创建多声道 WAV 文件
 - 自动清理中间文件
 
+## 环境变量参考
+
+| 变量 / Variable | 描述 / Description | 示例 / Example |
+|---|---|---|
+| `RUST_LOG` | 日志级别（error, warn, info, debug, trace） / Logging level | `RUST_LOG=debug` |
+| `MCAT_GST_LAUNCH` | `gst-launch-1.0` 的绝对路径 / Absolute path to gst-launch-1.0 | `MCAT_GST_LAUNCH=/usr/bin/gst-launch-1.0` |
+| `MCAT_GST_PLUGINS` | GStreamer 插件目录路径 / Path to GStreamer plugins dir | `MCAT_GST_PLUGINS=/path/to/gst-plugins` |
+| `MCAT_DOLBY_TOOLS` | Dolby 工具基目录 / Base dir containing gstreamer/bin and gst-plugins | `MCAT_DOLBY_TOOLS=/path/to/dolby-tools` |
+| `MCAT_MAX_PAR` | 最大并行作业数（可被 `-j/--jobs` 覆盖）/ Max parallel jobs (overridden by -j flag) | `MCAT_MAX_PAR=8` |
+| `DYLD_LIBRARY_PATH` | 动态库搜索路径（macOS）/ Dynamic library search path (macOS) | `DYLD_LIBRARY_PATH=/path/to/libs:$DYLD_LIBRARY_PATH` |
+| `GST_PLUGIN_PATH` | GStreamer 插件搜索路径 / GStreamer plugin search path | `GST_PLUGIN_PATH=/path/to/plugins:$GST_PLUGIN_PATH` |
+| `RUST_BACKTRACE` | 启用 Rust 崩溃堆栈跟踪 / Enable Rust crash backtrace | `RUST_BACKTRACE=1` 或 `full` |
+
 ## 项目设置
 
 ### 初次克隆后的设置
 
 ```bash
-# 配置预提交钩子（推荐）
+# 配置预提交钩子（推荐）/ Setup pre-commit hooks (recommended)
 bash scripts/setup-hooks.sh
 
-# 或者手动配置
+# 或者手动配置 / Or manually configure
 git config core.hooksPath .githooks
 chmod +x .githooks/pre-commit
 ```
@@ -331,8 +365,37 @@ cargo run --release -- --input audio/test.eac3 --channels 5.1 --output /tmp/test
 - 格式检测失败
 - 合并期间 WAV 处理错误
 
+## 提交前检查清单
+
+在提交代码前，请运行以下检查：
+
+```bash
+# 1. 检查代码格式 / Check code formatting
+cargo fmt
+
+# 2. 运行 clippy 检查（必须通过所有 warnings） / Run clippy checks (must pass all warnings)
+cargo clippy -- -D warnings
+
+# 3. 验证构建成功 / Verify build succeeds
+cargo build --release
+
+# 4. 验证代码符合规范 / Verify code follows standards
+# - 所有注释使用中英双语 / All comments use Chinese/English bilingual
+# - 函数名、变量名使用英文 / Function and variable names use English
+# - 禁止使用 emoji / No emojis in code comments
+# - 日志使用中英双语 / Logs use Chinese/English bilingual
+
+# 5. （可选）运行完整测试 / (Optional) Run full tests
+cargo run -- --input audio/test.eac3 --channels 5.1
+```
+
+提交信息规范：
+- 使用 Conventional Commits 格式：`<type>: <Chinese desc> / <English desc>`
+- 保持简洁（第一行 < 50 字符）/ Keep concise (first line < 50 chars)
+- 添加详细说明时，在第二行留空 / Leave blank line before detailed description
+
 ## Git 工作流程
 
-- 主分支：`master`
-- 最近重写：Rust 实现（提交 590769c）
-- 跟踪 `.DS_Store` 中的更改（当前未跟踪）
+- 主分支：`master` / Main branch: `master`
+- 最近重写：Rust 实现（提交 590769c）/ Latest rewrite: Rust implementation (commit 590769c)
+- 跟踪 `.DS_Store` 中的更改（当前未跟踪）/ .DS_Store tracking (currently untracked)

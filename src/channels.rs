@@ -93,6 +93,16 @@ const CONFIGS: &[ChannelDef] = &[
 ];
 
 pub fn get_config(config_name: &str) -> Result<ChannelConfig> {
+    // 处理特殊的"auto"配置 / Handle special "auto" configuration
+    // 在此模式下，解码器将不会指定 out-ch-config，使用文件的原生声道配置
+    // In this mode, the decoder won't specify out-ch-config, using the file's native configuration
+    if config_name.eq_ignore_ascii_case("auto") {
+        return Ok(ChannelConfig {
+            id: u32::MAX, // 使用特殊的 id 标记 / Use special id as marker
+            names: vec![],
+        });
+    }
+
     if let Some(def) = CONFIGS
         .iter()
         .find(|d| d.name.eq_ignore_ascii_case(config_name))
@@ -108,6 +118,6 @@ pub fn get_config(config_name: &str) -> Result<ChannelConfig> {
         .collect::<Vec<_>>()
         .join(", ");
     Err(DecodeError::InvalidChannelConfig(format!(
-        "未知声道配置/Unknown channel configuration: {config_name}. 支持的配置/Supported: {supported}"
+        "未知声道配置/Unknown channel configuration: {config_name}. 支持的配置/Supported: {supported}, auto（自动检测文件原生声道 / auto-detect file's native channels）"
     )))
 }
