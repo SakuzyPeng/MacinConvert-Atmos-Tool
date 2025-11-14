@@ -399,3 +399,38 @@ cargo run -- --input audio/test.eac3 --channels 5.1
 - 主分支：`master` / Main branch: `master`
 - 最近重写：Rust 实现（提交 590769c）/ Latest rewrite: Rust implementation (commit 590769c)
 - 跟踪 `.DS_Store` 中的更改（当前未跟踪）/ .DS_Store tracking (currently untracked)
+
+## macOS 平台限制说明 / macOS Platform Limitations
+
+### 杜比全景声（Atmos）多声道解码限制
+
+**问题概述 / Problem Overview**
+- TrueHD Atmos 文件通常包含多个音频 presentation，包括 8 通道、16 通道等不同版本
+- 在 macOS 上，Dolby Reference Player 的 GStreamer 插件 **仅支持解码前 8 个声道**
+- Windows 版本支持 `truehddec-presentation` 参数来选择不同 presentation，但 **macOS 版本不支持**
+
+**技术原因 / Technical Reason**
+- macOS GStreamer 插件虽然声明了 `truehddec-presentation` 属性，但在命令行解析器中不可用
+- 通过 gst-launch-1.0 设置该属性失败：`no property "truehddec-presentation" in element "dlbtruehddec"`
+- 尝试通过 Python/Rust GStreamer 绑定直接设置属性也因库依赖问题失败
+- **结论**：macOS 构建的插件在实现级别禁用或移除了该功能
+
+**实现的解决方案 / Implemented Solution**
+- 添加自动检测功能：`--channels auto`
+- 自动尝试解码文件中的所有可用声道，直到遇到空声道
+- 对于测试文件（Ver2-THD-from-DolbyMediaEncoder.mlp），自动检测返回 8 个有效声道
+
+**使用建议 / Recommendations**
+```bash
+# 自动检测声道配置（推荐）/ Auto-detect channel configuration (recommended)
+./MacinConvert-Atmos-Tool --input file.mlp --channels auto
+
+# 使用特定声道配置（仅支持前 8 个声道）/ Use specific config (only first 8 channels supported)
+./MacinConvert-Atmos-Tool --input file.mlp --channels 5.1
+```
+
+**后续工作 / Future Work**
+如果用户需要访问 16 通道内容，可以考虑：
+1. 在 Windows 环境中使用 Windows 版本的工具
+2. 使用 Dolby Reference Player GUI 播放器（虽然许可证会过期）
+3. 等待 Dolby 官方更新 macOS GStreamer 插件以启用该功能（不太可能）
