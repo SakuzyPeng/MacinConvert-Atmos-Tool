@@ -357,12 +357,12 @@ Use the `--channels auto` option to automatically detect the actual decodable ch
 
 For TrueHD Atmos files, this will detect and extract exactly 8 channels. If you need to access all presentations in a TrueHD file, you may need to:
 1. Use Windows version of tools (Windows supports `truehddec-presentation`)
-2. Use Dolby Reference Player GUI to export specific presentations
+2. Use Dolby Reference Player CLI to export specific presentations
 3. Wait for Dolby to update the macOS plugin (unlikely)
 
 对于 TrueHD Atmos 文件，这将检测并提取恰好 8 个声道。如果需要访问 TrueHD 文件中的所有 presentation，可以：
 1. 使用 Windows 版本的工具（Windows 支持 `truehddec-presentation`）
-2. 使用 Dolby Reference Player GUI 导出特定 presentation
+2. 使用 Dolby Reference Player CLI 导出特定 presentation
 3. 等待 Dolby 更新 macOS 插件（不太可能）
 
 ## Project Structure / 项目结构
