@@ -323,6 +323,48 @@ cargo clippy -- -D warnings
 cargo run -- --input audio/sample_input.ec3 --channels 5.1
 ```
 
+## Known Limitations / 已知限制
+
+### macOS TrueHD 8-Channel Limitation / macOS TrueHD 8 通道限制
+
+**Issue / 问题**
+
+On macOS, the Dolby Reference Player's GStreamer plugin only supports decoding the first 8 channels of TrueHD Atmos files. While TrueHD files can contain multiple presentations including 16-channel versions, the macOS plugin cannot access these higher-channel presentations.
+
+在 macOS 上，Dolby Reference Player 的 GStreamer 插件仅支持解码 TrueHD Atmos 文件的前 8 个声道。虽然 TrueHD 文件可以包含多个 presentation（包括 16 通道版本），但 macOS 插件无法访问这些高通道版本。
+
+**Root Cause / 根本原因**
+
+The macOS plugin build disables or removes the `truehddec-presentation` parameter at the implementation level. Although the property exists in GObject metadata, it is not accessible via `gst-launch-1.0` command-line or programmatic APIs (PyGObject, Rust bindings).
+
+macOS 插件构建在实现级别禁用或移除了 `truehddec-presentation` 参数。虽然该属性在 GObject 元数据中存在，但无法通过 `gst-launch-1.0` 命令行或编程 API（PyGObject、Rust 绑定）访问。
+
+**Impact / 影响**
+
+- E-AC3 files: Fully supported, no limitations / E-AC3 文件：完全支持，无限制
+- TrueHD files: Only first 8 channels decodable / TrueHD 文件：仅前 8 个声道可解码
+
+**Workaround / 解决方案**
+
+Use the `--channels auto` option to automatically detect the actual decodable channels in a file:
+
+使用 `--channels auto` 选项自动检测文件中实际可解码的声道数：
+
+```bash
+# Auto-detect available channels / 自动检测可用声道
+./MacinConvert-Atmos-Tool --input file.mlp --channels auto
+```
+
+For TrueHD Atmos files, this will detect and extract exactly 8 channels. If you need to access all presentations in a TrueHD file, you may need to:
+1. Use Windows version of tools (Windows supports `truehddec-presentation`)
+2. Use Dolby Reference Player GUI to export specific presentations
+3. Wait for Dolby to update the macOS plugin (unlikely)
+
+对于 TrueHD Atmos 文件，这将检测并提取恰好 8 个声道。如果需要访问 TrueHD 文件中的所有 presentation，可以：
+1. 使用 Windows 版本的工具（Windows 支持 `truehddec-presentation`）
+2. 使用 Dolby Reference Player GUI 导出特定 presentation
+3. 等待 Dolby 更新 macOS 插件（不太可能）
+
 ## Project Structure / 项目结构
 
 ```
