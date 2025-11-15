@@ -218,7 +218,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 input.with_extension("wav")
             };
 
-            merger::merge_channels(&decoded_files, &merged_file)?;
+            merger::merge_channels(&decoded_files, &merged_file, Some(&channel_config))?;
             println!(
                 "已将声道合并至 {}/Merged channels to {}",
                 merged_file.display(),

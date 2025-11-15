@@ -1,7 +1,13 @@
+use crate::channels::ChannelConfig;
 use crate::error::{DecodeError, Result};
+use serde_json::json;
 use std::path::Path;
 
-pub fn merge_channels(channel_files: &[std::path::PathBuf], output_file: &Path) -> Result<()> {
+pub fn merge_channels(
+    channel_files: &[std::path::PathBuf],
+    output_file: &Path,
+    config: Option<&ChannelConfig>,
+) -> Result<()> {
     // 目前使用 hound 库的简单方案/For now, we'll use a simple approach via hound library
     // 将所有单声道 WAV 合成为多声道 WAV/This will combine all mono WAV files into a multi-channel WAV
 
@@ -113,6 +119,34 @@ pub fn merge_channels(channel_files: &[std::path::PathBuf], output_file: &Path) 
     writer.finalize().map_err(|e| {
         DecodeError::MergeFailed(format!("无法最终化 WAV 文件/Cannot finalize WAV file: {e}"))
     })?;
+
+    // 如果提供了声道配置，写入元数据文件 / Write metadata if channel config provided
+    if let Some(ch_config) = config {
+        let metadata = json!({
+            "channel_config": ch_config.name,
+            "num_channels": ch_config.names.len(),
+            "channels": ch_config.names.iter()
+                .enumerate()
+                .map(|(idx, name)| format!("{}: {}", idx + 1, name))
+                .collect::<Vec<_>>(),
+            "sample_rate": spec.sample_rate,
+            "bits_per_sample": 32,
+            "sample_format": "float"
+        });
+
+        let metadata_path = output_file.with_extension("json");
+        std::fs::write(
+            &metadata_path,
+            serde_json::to_string_pretty(&metadata).map_err(|e| {
+                DecodeError::MergeFailed(format!("无法序列化元数据/Cannot serialize metadata: {e}"))
+            })?,
+        )
+        .map_err(|e| {
+            DecodeError::MergeFailed(format!(
+                "无法写入元数据文件/Cannot write metadata file: {e}"
+            ))
+        })?;
+    }
 
     Ok(())
 }

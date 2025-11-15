@@ -2,6 +2,7 @@ use crate::error::{DecodeError, Result};
 
 #[derive(Debug, Clone)]
 pub struct ChannelConfig {
+    pub name: String,
     pub id: u32,
     pub names: Vec<String>,
 }
@@ -98,6 +99,7 @@ pub fn get_config(config_name: &str) -> Result<ChannelConfig> {
     // In this mode, the decoder won't specify out-ch-config, using the file's native configuration
     if config_name.eq_ignore_ascii_case("auto") {
         return Ok(ChannelConfig {
+            name: "auto".to_string(),
             id: u32::MAX, // 使用特殊的 id 标记 / Use special id as marker
             names: vec![],
         });
@@ -108,6 +110,7 @@ pub fn get_config(config_name: &str) -> Result<ChannelConfig> {
         .find(|d| d.name.eq_ignore_ascii_case(config_name))
     {
         return Ok(ChannelConfig {
+            name: def.name.to_string(),
             id: def.id,
             names: def.names.iter().map(|s| (*s).to_string()).collect(),
         });
