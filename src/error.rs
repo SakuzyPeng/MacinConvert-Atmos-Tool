@@ -19,6 +19,9 @@ pub enum DecodeError {
 
     #[error("Audio merge failed: {0}")]
     MergeFailed(String),
+
+    #[error("FLAC conversion failed: {0}")]
+    FlacConversionFailed(String),
 }
 
 pub type Result<T> = std::result::Result<T, DecodeError>;

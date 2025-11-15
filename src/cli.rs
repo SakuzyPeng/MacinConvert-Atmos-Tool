@@ -58,4 +58,12 @@ pub struct FlagSet {
     /// 懒人模式：自动按文件顺序处理并合并清理（9.1.6）/Lazy mode: auto batch one file at a time with 9.1.6 + merge + cleanup
     #[arg(long)]
     pub lazy: bool,
+
+    /// 转码合并文件为 FLAC（24-bit，仅支持 ≤8 声道）/Convert merged file to FLAC (24-bit, only for ≤8 channels)
+    #[arg(long)]
+    pub flac: bool,
+
+    /// 转码为 FLAC 后保留原始 WAV 文件/Keep original WAV file after converting to FLAC
+    #[arg(long)]
+    pub keep_wav: bool,
 }

@@ -2,6 +2,7 @@ mod channels;
 mod cli;
 mod decoder;
 mod error;
+mod flac_converter;
 mod format;
 mod merger;
 mod tools;
@@ -224,6 +225,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 merged_file.display(),
                 merged_file.display()
             );
+
+            // Convert to FLAC if requested / 如果需要转码为 FLAC
+            if args.flags.flac {
+                // 检查声道数限制 / Check channel limit for FLAC
+                let num_channels = channel_config.names.len() as u16;
+                if let Err(e) = flac_converter::check_flac_compatibility(num_channels) {
+                    eprintln!("[警告] FLAC 转码失败/FLAC conversion warning: {e}");
+                } else {
+                    // 构建 FLAC 输出路径 / Build FLAC output path
+                    let flac_file = merged_file.with_extension("flac");
+
+                    // 执行转码 / Perform conversion
+                    match flac_converter::convert_batch(
+                        &merged_file,
+                        &flac_file,
+                        Some(&channel_config),
+                    ) {
+                        Ok(()) => {
+                            println!(
+                                "FLAC 转码完成/FLAC conversion completed: {}",
+                                flac_file.display()
+                            );
+
+                            // 删除原始 WAV 文件（如果不保留）/ Delete original WAV (if not keeping)
+                            if !args.flags.keep_wav {
+                                std::fs::remove_file(&merged_file)?;
+                                println!(
+                                    "已删除原始 WAV 文件/Removed original WAV: {}",
+                                    merged_file.display()
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!(
+                                "[错误] FLAC 转码失败/FLAC conversion failed: {e}. 保留原始 WAV 文件/Keeping original WAV."
+                            );
+                        }
+                    }
+                }
+            }
 
             // Cleanup discrete files if requested / 如果需要清理分离的文件
             if plan.cleanup {

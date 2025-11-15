@@ -6,7 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **说中文！**: 此项目使用中文进行交流。请用中文回复所有问题和提供所有反馈。
 
-## 快速命令参考
+## 快速开始 / Quick Start
+
+### 首次设置 / Initial Setup
+
+```bash
+# 1. 克隆仓库 / Clone repository
+git clone https://github.com/SakuzyPeng/MacinConvert-Atmos-Tool.git
+cd MacinConvert-Atmos-Tool
+
+# 2. 配置 git hooks（推荐）/ Setup git hooks (recommended)
+bash scripts/setup-hooks.sh
+
+# 3. 构建发布版本 / Build release binary
+cargo build --release
+
+# 完成！二进制文件位于 / Binary is at: target/release/MacinConvert-Atmos-Tool
+```
+
+### 快速命令参考 / Quick Command Reference
 
 ```bash
 # 开发工作流 / Development workflow
@@ -17,11 +35,11 @@ cargo fmt               # 格式化代码 / Format code
 cargo clippy -- -D warnings  # 代码检查 / Lint warnings
 cargo run -- --help     # 查看所有 CLI 参数 / Show all CLI args
 
-# 测试 / Testing
+# 测试 / Testing（需要测试音频文件 / Requires test audio file）
 cargo run -- --input audio/test.eac3 --channels 5.1  # 测试基本功能 / Test basic functionality
 RUST_LOG=debug cargo run -- --input test.eac3        # 启用调试日志 / Enable debug logging
 
-# 项目设置 / Initial setup
+# 项目设置 / Project setup
 bash scripts/setup-hooks.sh  # 配置 git hooks / Setup git hooks
 ```
 
@@ -250,13 +268,42 @@ cargo check
 - **`ChannelConfig`** (`channels.rs`)：包含声道名称、ID 和布局
 - **`DecodeMode`**：并行（更快）vs 顺序（节省内存）
 
+### 模块依赖关系
+
+```
+main.rs
+├── cli.rs              (CLI 参数)
+├── format.rs           (格式检测)
+├── channels.rs         (声道配置)
+├── tools.rs            (工具定位)
+├── decoder.rs          (解码逻辑)
+│   ├── format.rs
+│   ├── channels.rs
+│   └── tools.rs
+├── merger.rs           (合并逻辑)
+│   └── channels.rs
+└── error.rs            (错误类型)
+```
+
+**调用流程**：
+- `main()` → 参数验证 → 格式检测 → 工具定位 → 解码 → 可选：合并 → 清理
+- 并行模式：Rayon 线程池并发执行多个声道解码
+- 顺序模式：逐个声道执行，节省内存
+
 ## 重要依赖
 
-- **clap 4.5**: 使用 derive 宏的 CLI 解析
-- **hound 3.5**: WAV 文件 I/O
-- **ndarray 0.15**: 数组操作（用于声道合并）
-- **thiserror 1.0**: 错误类型派生
-- **log + env_logger**: 结构化日志
+依赖版本详见 `Cargo.toml`。主要依赖说明：
+
+| 依赖 / Dependency | 版本 / Version | 用途 / Purpose |
+|---|---|---|
+| clap | 4.5 | CLI 参数解析（derive 宏风格）/ CLI arg parsing with derive macros |
+| hound | 3.5 | WAV 文件 I/O / WAV file I/O |
+| ndarray | 0.15 | 数组操作（声道合并）/ Array operations for channel merging |
+| rayon | 1.10 | 并行计算（多声道并行解码）/ Parallelism for multi-channel decoding |
+| thiserror | 1.0 | 错误类型派生 / Error type derivation |
+| log + env_logger | 0.4 / 0.11 | 结构化日志 / Structured logging |
+| serde / serde_json | 1.0 | JSON 序列化（保留，备用）/ JSON serialization (reserved) |
+| anyhow | 1.0 | 灵活的错误处理 / Flexible error handling |
 
 ## 外部工具依赖
 
@@ -328,6 +375,47 @@ soxi output.wav
 
 建议：对于 9.1.6（16 声道）配置，如果系统内存 < 8GB，使用 `--single` 选项。
 
+## 常见开发问题 / Common Development Issues
+
+### GStreamer 环境配置问题
+如果遇到 "找不到 gst-launch-1.0" 或 "无法加载 Dolby 插件" 错误：
+
+```bash
+# 方式 1：使用环境变量指定路径
+export MCAT_DOLBY_TOOLS="/path/to/dolby-tools"
+cargo run -- --input file.eac3
+
+# 方式 2：使用命令行参数
+cargo run -- --input file.eac3 --dolby-tools /path/to/dolby-tools
+
+# 方式 3：验证 Dolby Reference Player 是否已安装
+ls -la "/Applications/Dolby/Dolby Reference Player.app/Contents/Frameworks/"
+
+# 方式 4：使用调试日志诊断问题
+RUST_LOG=debug cargo run -- --input file.eac3
+```
+
+### 编译错误
+```bash
+# 确保使用最新的 Rust
+rustup update
+
+# 清理并重新构建
+cargo clean
+cargo build
+
+# 检查依赖问题
+cargo tree
+```
+
+### 内存不足
+如果处理大型文件时内存溢出：
+
+```bash
+# 使用顺序解码模式（一次解码一个声道）
+cargo run -- --input large_file.eac3 --single --channels 9.1.6
+```
+
 ## 测试说明
 
 目前没有单元测试框架。对于手动测试：
@@ -365,7 +453,41 @@ cargo run --release -- --input audio/test.eac3 --channels 5.1 --output /tmp/test
 - 格式检测失败
 - 合并期间 WAV 处理错误
 
-## 提交前检查清单
+## 代码审查要点 / Code Review Checklist
+
+进行代码审查或提交前，检查以下关键点：
+
+### 编码规范 / Code Style
+- 使用 `cargo fmt` 格式化代码
+- 所有注释使用 **中英双语**：`中文 / English`
+- 函数名、变量名使用英文 snake_case
+- 常量使用 SCREAMING_SNAKE_CASE
+- **禁止使用 emoji** 在代码注释中
+
+### 错误处理 / Error Handling
+- 检查是否正确处理 `Result<T>` 和 `Option<T>`
+- 使用 `thiserror` 定义自定义错误
+- 确保错误消息使用中英双语格式
+- 避免 `unwrap()` 和 `panic!()`，除非有明确注释说明理由
+
+### 性能考虑 / Performance
+- 并行解码使用 `rayon::par_bridge()` 执行
+- WAV 文件 I/O 使用 `hound` 库
+- 大型操作检查内存使用，考虑 `--single` 模式
+- 避免不必要的克隆，优先使用引用
+
+### 外部工具调用 / External Tool Invocation
+- GStreamer 命令通过 `Command` 创建，设置正确的 `PluginPath`
+- 检查工具定位逻辑，遵循优先级：env → `dolby-tools/` → 系统 DRP
+- 所有 GStreamer 参数必须正确转义（特别是 shell 特殊字符）
+
+### 测试 / Testing
+- 在多个声道配置下测试（2.0、5.1、9.1.6）
+- 测试并行和顺序两种模式
+- 验证合并和清理功能正常工作
+- 检查大文件处理是否正确
+
+## 提交前检查清单 / Pre-Commit Checklist
 
 在提交代码前，请运行以下检查：
 
@@ -384,15 +506,50 @@ cargo build --release
 # - 函数名、变量名使用英文 / Function and variable names use English
 # - 禁止使用 emoji / No emojis in code comments
 # - 日志使用中英双语 / Logs use Chinese/English bilingual
+# - 错误处理完整 / Error handling is complete
 
 # 5. （可选）运行完整测试 / (Optional) Run full tests
 cargo run -- --input audio/test.eac3 --channels 5.1
+
+# 6. （可选）测试不同场景 / (Optional) Test various scenarios
+cargo run -- --input test.eac3 --channels 9.1.6 --single
+cargo run -- --input test.eac3 --channels auto
 ```
 
-提交信息规范：
-- 使用 Conventional Commits 格式：`<type>: <Chinese desc> / <English desc>`
+### 提交信息规范 / Commit Message Format
+
+使用 Conventional Commits 格式：
+
+```
+<type>: <中文描述> / <English description>
+
+<中文详细说明 / English detailed explanation>（可选）
+
+类型 / Type：
+  • feat: 新功能 / New feature
+  • fix: 修复 bug / Bug fix
+  • refactor: 重构 / Refactor
+  • perf: 性能优化 / Performance improvement
+  • docs: 文档更新 / Documentation update
+  • test: 测试相关 / Test related
+  • chore: 构建或依赖更新 / Build or dependency update
+```
+
+**示例 / Example**：
+```
+feat: 添加自动声道检测功能 / Add auto-detect channel feature
+
+实现 --channels auto，自动检测文件中可用的声道数，最多到 16 个声道。
+Implement --channels auto to automatically detect available channels in files, up to 16 channels.
+
+相关 issue / Related: #42
+```
+
+**提交信息指导 / Guidelines**：
 - 保持简洁（第一行 < 50 字符）/ Keep concise (first line < 50 chars)
-- 添加详细说明时，在第二行留空 / Leave blank line before detailed description
+- 第二行留空 / Leave blank line before body
+- 详细说明中说明 **为什么** 而不是 **是什么** / Focus on "why" not "what"
+- 包含相关 issue 编号 / Include related issue number
 
 ## Git 工作流程
 
