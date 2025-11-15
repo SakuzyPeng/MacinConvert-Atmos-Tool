@@ -405,6 +405,16 @@ Sakuzy
 
 ## Changelog / 更新日志
 
+### 0.1.1
+
+Improvements / 改进：
+- Add WAV file comment support for merged channels / 为合并的声道添加 WAV 文件注释支持
+  - Channel configuration is now stored in WAV INFO/ICOM chunk / 声道配置现在存储在 WAV INFO/ICOM chunk 中
+  - mediainfo and other tools can now read the original channel configuration / mediainfo 和其他工具现在可以读取原始声道配置
+  - Example comment / 注释示例：`5.1.2 [1: L, 2: R, 3: C, 4: LFE, 5: Ls, 6: Rs, 7: Ltm, 8: Rtm]`
+- Remove JSON metadata output (replaced by WAV comments) / 移除 JSON 元数据输出（已由 WAV 注释取代）
+- Code cleanup and minor optimizations / 代码清理和小优化
+
 ### 0.1.0
 
 Initial release with support for / 初始版本，支持：

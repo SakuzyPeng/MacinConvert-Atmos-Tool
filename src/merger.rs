@@ -1,6 +1,7 @@
 use crate::channels::ChannelConfig;
 use crate::error::{DecodeError, Result};
-use serde_json::json;
+use std::fs::OpenOptions;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
 pub fn merge_channels(
@@ -120,33 +121,67 @@ pub fn merge_channels(
         DecodeError::MergeFailed(format!("无法最终化 WAV 文件/Cannot finalize WAV file: {e}"))
     })?;
 
-    // 如果提供了声道配置，写入元数据文件 / Write metadata if channel config provided
+    // 在 WAV 文件备注中写入声道配置信息 / Add channel configuration to WAV file comments
     if let Some(ch_config) = config {
-        let metadata = json!({
-            "channel_config": ch_config.name,
-            "num_channels": ch_config.names.len(),
-            "channels": ch_config.names.iter()
-                .enumerate()
-                .map(|(idx, name)| format!("{}: {}", idx + 1, name))
-                .collect::<Vec<_>>(),
-            "sample_rate": spec.sample_rate,
-            "bits_per_sample": 32,
-            "sample_format": "float"
-        });
-
-        let metadata_path = output_file.with_extension("json");
-        std::fs::write(
-            &metadata_path,
-            serde_json::to_string_pretty(&metadata).map_err(|e| {
-                DecodeError::MergeFailed(format!("无法序列化元数据/Cannot serialize metadata: {e}"))
-            })?,
-        )
-        .map_err(|e| {
-            DecodeError::MergeFailed(format!(
-                "无法写入元数据文件/Cannot write metadata file: {e}"
-            ))
+        let channel_list = ch_config
+            .names
+            .iter()
+            .enumerate()
+            .map(|(idx, name)| format!("{}: {}", idx + 1, name))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let comment = format!("{} [{}]", ch_config.name, channel_list);
+        add_wav_comment(output_file, &comment).map_err(|e| {
+            DecodeError::MergeFailed(format!("无法添加 WAV 备注/Failed to add WAV comment: {e}"))
         })?;
     }
+
+    Ok(())
+}
+
+/// 在 WAV 文件中添加备注信息 / Add comment to WAV file
+/// 将声道配置信息写入 WAV 文件的 LIST chunk 中的 ICOM (comment) 字段
+fn add_wav_comment(file_path: &Path, comment: &str) -> std::io::Result<()> {
+    let comment_bytes = comment.as_bytes();
+    // ICOM 块需要偶数长度的数据（如果奇数则补一个 null byte）
+    let padded_len = (comment_bytes.len() + 1) & !1;
+
+    // LIST chunk 的结构：
+    // "LIST" (4 bytes) + size (4 bytes) + "INFO" (4 bytes) + "ICOM" (4 bytes) + size (4 bytes) + data
+    let list_size = 4 + 4 + 4 + 4 + padded_len; // INFO + ICOM + ICOM_size + comment data
+
+    let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
+
+    // Seek 到 RIFF 大小字段（偏移 4）/ Seek to RIFF size field (offset 4)
+    file.seek(SeekFrom::Start(4))?;
+
+    // 读取 RIFF 大小 / Read RIFF size
+    let mut riff_size_bytes = [0u8; 4];
+    file.read_exact(&mut riff_size_bytes)?;
+    let mut riff_size = u32::from_le_bytes(riff_size_bytes) as u64;
+
+    // 添加新的 LIST chunk 到文件末尾（在任何现有数据之前）
+    file.seek(SeekFrom::End(0))?;
+
+    // 写入 LIST chunk header
+    file.write_all(b"LIST")?;
+    file.write_all(&(list_size as u32).to_le_bytes())?;
+    file.write_all(b"INFO")?;
+
+    // 写入 ICOM subchunk
+    file.write_all(b"ICOM")?;
+    file.write_all(&(comment_bytes.len() as u32).to_le_bytes())?;
+    file.write_all(comment_bytes)?;
+
+    // 如果数据长度为奇数，添加 padding byte
+    if comment_bytes.len() % 2 != 0 {
+        file.write_all(&[0u8])?;
+    }
+
+    // 更新 RIFF 大小
+    riff_size += 4 + 4 + 4 + 4 + padded_len as u64;
+    file.seek(SeekFrom::Start(4))?;
+    file.write_all(&(riff_size as u32).to_le_bytes())?;
 
     Ok(())
 }
