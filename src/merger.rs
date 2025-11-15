@@ -174,7 +174,7 @@ fn add_wav_comment(file_path: &Path, comment: &str) -> std::io::Result<()> {
     file.write_all(comment_bytes)?;
 
     // 如果数据长度为奇数，添加 padding byte
-    if comment_bytes.len() % 2 != 0 {
+    if !comment_bytes.len().is_multiple_of(2) {
         file.write_all(&[0u8])?;
     }
 
