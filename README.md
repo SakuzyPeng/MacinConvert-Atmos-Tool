@@ -229,12 +229,40 @@ Options:
   --cleanup
       Remove separated mono files after merging / 合并后删除分离的单声道文件
 
+  --flac
+      Convert merged WAV to FLAC format with maximum compression / 将合并的 WAV 转码为 FLAC 格式（最大压缩）
+
+  --keep-wav
+      Keep the original merged WAV file after FLAC conversion / FLAC 转码后保留原始合并的 WAV 文件
+
   -h, --help
       Show help information / 显示帮助信息
 
   -V, --version
       Show version information / 显示版本信息
 ```
+
+### FLAC Conversion / FLAC 转码
+
+Convert merged multi-channel WAV to FLAC format with maximum compression and Dolby channel metadata / 将合并的多声道 WAV 转码为 FLAC 格式，支持最大压缩和杜比声道元数据：
+
+```bash
+./MacinConvert-Atmos-Tool --input file.eac3 --channels 5.1 --merge --flac
+```
+
+FLAC features / FLAC 特性：
+- Maximum compression level (-8) / 最大压缩级别 (-8)
+- Preserves original Dolby channel naming in Vorbis comments / 在 Vorbis 注释中保留原始杜比声道名称
+- Channel layout marked as "Sourced from Dolby" / 声道布局标注为"源自杜比"
+- Supports up to 8 channels (FLAC limitation) / 支持最多 8 个声道（FLAC 限制）
+
+Optional: Keep the original WAV file after FLAC conversion / 可选：转码后保留原始 WAV 文件：
+
+```bash
+./MacinConvert-Atmos-Tool --input file.eac3 --channels 5.1 --merge --flac --keep-wav
+```
+
+Without `--keep-wav`, the original WAV is deleted after successful FLAC conversion to save disk space / 不带 `--keep-wav` 时，转码成功后原始 WAV 会被删除以节省磁盘空间。
 
 ## Output Format / 输出格式
 
@@ -256,6 +284,22 @@ Specifications / 规格：
 - Sample rate: 48000 Hz (same as source) / 采样率：48000 Hz（与源文件相同）
 - Number of channels: Based on configuration (2-16 channels) / 声道数：根据配置（2-16 个声道）
 - Channel order: Following ITU-R BS.2051 standard / 声道顺序：按 ITU-R BS.2051 标准排列
+
+### FLAC File / FLAC 文件
+
+Format / 格式：`input.flac`
+
+Specifications / 规格：
+- Codec: FLAC (Free Lossless Audio Codec) / 编码格式：FLAC（免费无损音频编码）
+- Compression: Maximum level (-8) / 压缩：最大级别 (-8)
+- Sample format: 24-bit PCM Integer / 采样格式：24-bit PCM 整数
+- Sample rate: 48000 Hz (same as source) / 采样率：48000 Hz（与源文件相同）
+- Number of channels: Max 8 (FLAC specification limit) / 声道数：最多 8 个（FLAC 规范限制）
+- Metadata: Vorbis comments including channel layout information / 元数据：Vorbis 注释，包含声道布局信息
+- File size: Approximately 15-20% of original WAV size with max compression / 文件大小：大约为原始 WAV 大小的 15-20%（最大压缩）
+
+Performance example / 性能示例：
+- 5.1 channel 16-minute audio: ~244 MB WAV → ~42 MB FLAC (82.8% reduction) / 5.1 声道 16 分钟音频：~244 MB WAV → ~42 MB FLAC（压缩 82.8%）
 
 ## Logging / 日志
 
@@ -365,19 +409,6 @@ For TrueHD Atmos files, this will detect and extract exactly 8 channels. If you 
 2. 使用 Dolby Reference Player CLI 导出特定 presentation
 3. 等待 Dolby 更新 macOS 插件（不太可能）
 
-## Project Structure / 项目结构
-
-```
-src/
-  main.rs         - Program entry point and main workflow / 程序入口和主工作流
-  cli.rs          - Command-line argument parsing / 命令行参数解析
-  decoder.rs      - GStreamer decoding logic / GStreamer 解码逻辑
-  merger.rs       - Channel merging logic / 声道合并逻辑
-  channels.rs     - Channel configuration definitions / 声道配置定义
-  tools.rs        - Dolby tool locating / Dolby 工具定位
-  format.rs       - Audio format detection / 音频格式检测
-  error.rs        - Error type definitions / 错误类型定义
-```
 
 
 
@@ -404,6 +435,19 @@ Sakuzy
   本项目与 Dolby 无任何从属或合作关系；相关商标归其各自权利人所有。
 
 ## Changelog / 更新日志
+
+### 0.1.2
+
+New features / 新功能：
+- Add FLAC audio conversion support / 添加 FLAC 音频转码功能
+  - Convert merged multi-channel WAV to FLAC format with `--flac` flag / 使用 `--flac` 标志将合并的多声道 WAV 转码为 FLAC
+  - Support `--keep-wav` flag to preserve original WAV file / 支持 `--keep-wav` 标志保留原始 WAV 文件
+  - Maximum compression level (-8) for optimal file size / 最大压缩级别 (-8) 用于最优文件大小
+  - Preserve Dolby channel naming in FLAC Vorbis comments / 在 FLAC Vorbis 注释中保留杜比声道名称
+  - Channel layout marked as "Sourced from Dolby" / 声道布局标注为"源自杜比"
+  - Support up to 8 channels (FLAC specification limit) / 支持最多 8 个声道（FLAC 规范限制）
+  - 32-bit Float WAV to 24-bit PCM conversion during encoding / 编码时将 32-bit Float WAV 转换为 24-bit PCM
+  - Real-world example: 244 MB WAV → 42 MB FLAC (82.8% reduction) / 实际示例：244 MB WAV → 42 MB FLAC（压缩 82.8%）
 
 ### 0.1.1
 
