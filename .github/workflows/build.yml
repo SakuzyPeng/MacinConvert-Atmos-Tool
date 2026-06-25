@@ -54,12 +54,14 @@ jobs:
           ~/.cargo/bin
           ~/.cargo/.crates.toml
           ~/.cargo/.crates2.json
-        key: ${{ runner.os }}-cargo-bin-cargo-audit-0.21.2
+        key: ${{ runner.os }}-cargo-bin-cargo-audit-0.22.2
 
     - name: Install cargo-audit
+      # 固定到 0.22.2：旧版 0.21.2 无法解析 CVSS 4.0 的 advisory（如 RUSTSEC-2026-0003）
+      # Pin to 0.22.2: older 0.21.2 cannot parse CVSS 4.0 advisories (e.g. RUSTSEC-2026-0003)
       run: |
-        if ! command -v cargo-audit >/dev/null 2>&1; then
-          cargo install cargo-audit --locked
+        if ! cargo audit --version 2>/dev/null | grep -q "0.22.2"; then
+          cargo install cargo-audit --version 0.22.2 --locked --force
         fi
 
     - name: Format Check
@@ -73,6 +75,9 @@ jobs:
 
     - name: Clippy Check
       run: cargo clippy -- -D warnings
+
+    - name: Run Unit Tests
+      run: cargo test
 
     - name: Build Release Binary
       run: cargo build --release
