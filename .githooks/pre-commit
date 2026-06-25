@@ -42,9 +42,21 @@ fi
 echo -e "${GREEN}[通过] Clippy 检查通过 / Clippy check passed${NC}"
 echo ""
 
-# Security Audit (optional - can be slower)
-echo -e "${YELLOW}[步骤] 运行安全审计 / Running security audit...${NC}"
-if ! cargo audit; then
+# Unit Tests
+echo -e "${YELLOW}[步骤] 运行单元测试 / Running unit tests (cargo test)...${NC}"
+if ! cargo test; then
+    echo -e "${RED}[错误] 单元测试失败 / Unit tests failed!${NC}"
+    exit 1
+fi
+echo -e "${GREEN}[通过] 单元测试通过 / Unit tests passed${NC}"
+echo ""
+
+# Security Audit (offline) / 安全审计（离线）
+# 使用本地 advisory-db，避免 cargo-audit 内置拉取在本环境失败 / Use local advisory-db; cargo-audit's built-in fetch fails in this environment
+# 定期更新数据库 / Update the database periodically with:
+#   git -C ~/.cargo/advisory-db pull --ff-only
+echo -e "${YELLOW}[步骤] 运行安全审计（离线）/ Running security audit (offline)...${NC}"
+if ! cargo audit -n; then
     echo -e "${RED}[错误] 安全审计发现漏洞 / Security audit found vulnerabilities!${NC}"
     exit 1
 fi

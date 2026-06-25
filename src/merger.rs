@@ -185,3 +185,123 @@ fn add_wav_comment(file_path: &Path, comment: &str) -> std::io::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    // 写一个单声道 F32 WAV / Write a mono F32 WAV file
+    fn write_mono_f32(path: &Path, samples: &[f32], sample_rate: u32, channels: u16) {
+        let spec = hound::WavSpec {
+            channels,
+            sample_rate,
+            bits_per_sample: 32,
+            sample_format: hound::SampleFormat::Float,
+        };
+        let mut w = hound::WavWriter::create(path, spec).unwrap();
+        for s in samples {
+            w.write_sample(*s).unwrap();
+        }
+        w.finalize().unwrap();
+    }
+
+    // 正常合并：声道数、采样率、交错顺序均正确 / Normal merge: channels, rate, interleaving correct
+    #[test]
+    fn merge_interleaves_channels_in_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let ch0 = dir.path().join("c0.wav");
+        let ch1 = dir.path().join("c1.wav");
+        let ch2 = dir.path().join("c2.wav");
+        write_mono_f32(&ch0, &[0.0, 0.1, 0.2], 48000, 1);
+        write_mono_f32(&ch1, &[1.0, 1.1, 1.2], 48000, 1);
+        write_mono_f32(&ch2, &[2.0, 2.1, 2.2], 48000, 1);
+
+        let out = dir.path().join("merged.wav");
+        let files = vec![ch0, ch1, ch2];
+        merge_channels(&files, &out, None).unwrap();
+
+        let reader = hound::WavReader::open(&out).unwrap();
+        assert_eq!(reader.spec().channels, 3);
+        assert_eq!(reader.spec().sample_rate, 48000);
+        let samples: Vec<f32> = reader.into_samples::<f32>().map(|s| s.unwrap()).collect();
+        let expected = [0.0, 1.0, 2.0, 0.1, 1.1, 2.1, 0.2, 1.2, 2.2];
+        assert_eq!(samples.len(), expected.len());
+        for (got, want) in samples.iter().zip(expected.iter()) {
+            assert!((got - want).abs() < 1e-6, "got {got}, want {want}");
+        }
+    }
+
+    // 空列表报错 / Empty list errors
+    #[test]
+    fn merge_empty_list_errors() {
+        let out = std::env::temp_dir().join("mcat_should_not_exist.wav");
+        let files: Vec<PathBuf> = vec![];
+        assert!(matches!(
+            merge_channels(&files, &out, None),
+            Err(DecodeError::MergeFailed(_))
+        ));
+    }
+
+    // 采样率不匹配报错 / Sample rate mismatch errors
+    #[test]
+    fn merge_sample_rate_mismatch_errors() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = dir.path().join("a.wav");
+        let b = dir.path().join("b.wav");
+        write_mono_f32(&a, &[0.0, 0.1], 48000, 1);
+        write_mono_f32(&b, &[1.0, 1.1], 44100, 1);
+        let out = dir.path().join("out.wav");
+        assert!(merge_channels(&[a, b], &out, None).is_err());
+    }
+
+    // 帧数不匹配报错 / Frame count mismatch errors
+    #[test]
+    fn merge_frame_count_mismatch_errors() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = dir.path().join("a.wav");
+        let b = dir.path().join("b.wav");
+        write_mono_f32(&a, &[0.0, 0.1, 0.2], 48000, 1);
+        write_mono_f32(&b, &[1.0, 1.1], 48000, 1);
+        let out = dir.path().join("out.wav");
+        assert!(merge_channels(&[a, b], &out, None).is_err());
+    }
+
+    // 输入非单声道报错 / Non-mono input errors
+    #[test]
+    fn merge_non_mono_input_errors() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = dir.path().join("a.wav");
+        let b = dir.path().join("b_stereo.wav");
+        write_mono_f32(&a, &[0.0, 0.1], 48000, 1);
+        write_mono_f32(&b, &[1.0, 1.1, 1.2, 1.3], 48000, 2); // 2ch, 2 frames
+        let out = dir.path().join("out.wav");
+        assert!(merge_channels(&[a, b], &out, None).is_err());
+    }
+
+    // 带配置时输出仍可读，且写入了声道配置注释 / With config: output readable and carries channel comment
+    #[test]
+    fn merge_with_config_writes_readable_wav_with_comment() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = dir.path().join("a.wav");
+        let b = dir.path().join("b.wav");
+        write_mono_f32(&a, &[0.0, 0.1], 48000, 1);
+        write_mono_f32(&b, &[1.0, 1.1], 48000, 1);
+        let out = dir.path().join("out.wav");
+
+        let config = ChannelConfig {
+            name: "2.0".to_string(),
+            id: 0,
+            names: vec!["L".to_string(), "R".to_string()],
+        };
+        merge_channels(&[a, b], &out, Some(&config)).unwrap();
+
+        // 输出仍可被 hound 解析 / output still parses with hound
+        let reader = hound::WavReader::open(&out).unwrap();
+        assert_eq!(reader.spec().channels, 2);
+
+        // 文件中包含 ICOM 注释块 / file contains ICOM comment chunk
+        let bytes = std::fs::read(&out).unwrap();
+        assert!(bytes.windows(4).any(|w| w == b"ICOM"));
+    }
+}

@@ -187,3 +187,95 @@ fn wav_to_flac_with_config(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // 写一个 F32 WAV / Write an F32 WAV file
+    fn write_f32_wav(path: &Path, samples: &[f32], sample_rate: u32, channels: u16) {
+        let spec = hound::WavSpec {
+            channels,
+            sample_rate,
+            bits_per_sample: 32,
+            sample_format: hound::SampleFormat::Float,
+        };
+        let mut w = hound::WavWriter::create(path, spec).unwrap();
+        for s in samples {
+            w.write_sample(*s).unwrap();
+        }
+        w.finalize().unwrap();
+    }
+
+    // 声道数限制：<=8 通过，>8 报错 / Channel limit: <=8 ok, >8 errors
+    #[test]
+    fn flac_compatibility_channel_limit() {
+        assert!(check_flac_compatibility(1).is_ok());
+        assert!(check_flac_compatibility(8).is_ok());
+        assert!(check_flac_compatibility(9).is_err());
+        assert!(check_flac_compatibility(16).is_err());
+    }
+
+    // 32-bit Float → 24-bit Int 转换：clamp、位深、样本数 / Conversion: clamp, bit depth, count
+    #[test]
+    fn convert_to_24bit_clamps_and_sets_format() {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src.wav");
+        let dst = dir.path().join("dst.wav");
+        // 含越界样本 / includes out-of-range samples
+        write_f32_wav(&src, &[0.0, 0.5, 1.5, -2.0], 48000, 1);
+
+        convert_to_24bit_wav(&src, &dst).unwrap();
+
+        let reader = hound::WavReader::open(&dst).unwrap();
+        assert_eq!(reader.spec().bits_per_sample, 24);
+        assert_eq!(reader.spec().sample_format, hound::SampleFormat::Int);
+        let samples: Vec<i32> = reader.into_samples::<i32>().map(|s| s.unwrap()).collect();
+        assert_eq!(samples.len(), 4);
+        assert_eq!(samples[0], 0);
+        assert_eq!(samples[1], (0.5_f32 * 8_388_607.0) as i32);
+        assert_eq!(samples[2], 8_388_607); // 1.5 clamp 到 1.0 / clamped to 1.0
+        assert_eq!(samples[3], -8_388_607); // -2.0 clamp 到 -1.0 / clamped to -1.0
+    }
+
+    // 前置校验：非 48kHz 采样率报错（不触达外部 flac）/ Pre-check: non-48k rate errors
+    #[test]
+    fn wav_to_flac_rejects_non_48k() {
+        let dir = tempfile::tempdir().unwrap();
+        let wav = dir.path().join("a.wav");
+        let flac = dir.path().join("a.flac");
+        write_f32_wav(&wav, &[0.0, 0.1], 44100, 1);
+        assert!(wav_to_flac_with_config(&wav, &flac, None).is_err());
+    }
+
+    // 前置校验：非 32-bit 位深报错 / Pre-check: non-32-bit depth errors
+    #[test]
+    fn wav_to_flac_rejects_non_32bit() {
+        let dir = tempfile::tempdir().unwrap();
+        let wav = dir.path().join("a.wav");
+        let flac = dir.path().join("a.flac");
+        // 写 16-bit Int WAV，采样率合法以确保命中位深校验 / 16-bit Int, valid rate to reach depth check
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 48000,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut w = hound::WavWriter::create(&wav, spec).unwrap();
+        w.write_sample(0_i16).unwrap();
+        w.write_sample(1_i16).unwrap();
+        w.finalize().unwrap();
+        assert!(wav_to_flac_with_config(&wav, &flac, None).is_err());
+    }
+
+    // 前置校验：声道数 >8 报错（在调用 flac 之前）/ Pre-check: >8 channels errors before flac
+    #[test]
+    fn wav_to_flac_rejects_too_many_channels() {
+        let dir = tempfile::tempdir().unwrap();
+        let wav = dir.path().join("a.wav");
+        let flac = dir.path().join("a.flac");
+        // 9 声道、2 帧、48kHz、32-bit / 9ch, 2 frames, 48kHz, 32-bit
+        write_f32_wav(&wav, &[0.0; 18], 48000, 9);
+        assert!(wav_to_flac_with_config(&wav, &flac, None).is_err());
+    }
+}

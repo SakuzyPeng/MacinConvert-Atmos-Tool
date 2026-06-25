@@ -16,6 +16,16 @@ fn find_gst_scanner(gst_launch: &Path) -> Option<PathBuf> {
     candidates.into_iter().find(|cand| cand.exists())
 }
 
+/// 生成单声道输出文件名后缀（带/不带编号）/ Build mono output filename suffix (with/without index)
+/// `channel_index` 为 0 起始；带编号时显示为两位数的 1 起始序号 / `channel_index` is 0-based; numbered form shows a 1-based two-digit index
+fn channel_output_suffix(channel_name: &str, channel_index: usize, no_numbers: bool) -> String {
+    if no_numbers {
+        format!(".{channel_name}.wav")
+    } else {
+        format!(".{:02}_{channel_name}.wav", channel_index + 1)
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn decode(
     input_file: &Path,
@@ -45,11 +55,7 @@ pub fn decode(
     let gst_scanner = find_gst_scanner(gst_launch);
 
     for (channel_id, channel_name) in channel_config.names.iter().enumerate() {
-        let suffix = if no_numbers {
-            format!(".{channel_name}.wav")
-        } else {
-            format!(".{:02}_{channel_name}.wav", channel_id + 1)
-        };
+        let suffix = channel_output_suffix(channel_name, channel_id, no_numbers);
 
         let out_path = output_base.map_or_else(
             || input_file.with_extension(&suffix[1..]),
@@ -147,11 +153,7 @@ fn decode_auto(
     const MAX_AUTO_CHANNELS: usize = 32;
     for channel_id in 0..MAX_AUTO_CHANNELS {
         let channel_name = format!("CH{channel_id}");
-        let suffix = if no_numbers {
-            format!(".{channel_name}.wav")
-        } else {
-            format!(".{:02}_{channel_name}.wav", channel_id + 1)
-        };
+        let suffix = channel_output_suffix(&channel_name, channel_id, no_numbers);
 
         let out_path = output_base.map_or_else(
             || input_file.with_extension(&suffix[1..]),
@@ -426,4 +428,71 @@ fn execute_command(command: &[String], gst_scanner: Option<&Path>) -> Result<()>
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // 文件名后缀：带编号为两位数 1 起始 / Suffix: numbered form is 1-based two-digit
+    #[test]
+    fn suffix_numbered_and_plain() {
+        assert_eq!(channel_output_suffix("L", 0, false), ".01_L.wav");
+        assert_eq!(channel_output_suffix("Rtr", 15, false), ".16_Rtr.wav");
+        assert_eq!(channel_output_suffix("L", 0, true), ".L.wav");
+        assert_eq!(channel_output_suffix("Rtr", 15, true), ".Rtr.wav");
+    }
+
+    // E-AC3 管道使用 dlbac3parse，不使用 truehd 解析器 / E-AC3 pipeline uses dlbac3parse, not truehd parser
+    #[test]
+    fn eac3_command_uses_ac3_parser() {
+        let cmd = build_gstreamer_command(
+            Path::new("in.eac3"),
+            Path::new("out.wav"),
+            2,
+            7,
+            Path::new("gst-launch-1.0"),
+            Path::new("/plugins"),
+            AudioFormat::Eac3,
+        );
+        assert!(cmd.iter().any(|a| a == "dlbac3parse"));
+        assert!(!cmd.iter().any(|a| a == "dlbtruehdparse"));
+        assert!(cmd.iter().any(|a| a == "out-ch-config=7"));
+        assert!(cmd.iter().any(|a| a == "d.src_2"));
+        assert!(cmd.iter().any(|a| a == "location=in.eac3"));
+        assert!(cmd.iter().any(|a| a == "location=out.wav"));
+    }
+
+    // TrueHD 管道使用 dlbtruehdparse 与 align-major-sync=false / TrueHD pipeline uses truehd parser
+    #[test]
+    fn truehd_command_uses_truehd_parser() {
+        let cmd = build_gstreamer_command(
+            Path::new("in.thd"),
+            Path::new("out.wav"),
+            0,
+            20,
+            Path::new("gst-launch-1.0"),
+            Path::new("/plugins"),
+            AudioFormat::TrueHD,
+        );
+        assert!(cmd.iter().any(|a| a == "dlbtruehdparse"));
+        assert!(cmd.iter().any(|a| a == "align-major-sync=false"));
+        assert!(cmd.iter().any(|a| a == "out-ch-config=20"));
+    }
+
+    // auto 模式固定使用最高声道配置 20 / Auto mode pins highest channel config 20
+    #[test]
+    fn auto_command_pins_out_ch_config_20() {
+        let cmd = build_gstreamer_command_auto(
+            Path::new("in.eac3"),
+            Path::new("out.wav"),
+            3,
+            Path::new("gst-launch-1.0"),
+            Path::new("/plugins"),
+            AudioFormat::Eac3,
+        );
+        assert!(cmd.iter().any(|a| a == "out-ch-config=20"));
+        assert!(cmd.iter().any(|a| a == "d.src_3"));
+        assert!(cmd.iter().any(|a| a == "dlbac3parse"));
+    }
 }
